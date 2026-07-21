@@ -10,7 +10,6 @@ export default function DashboardStats() {
     chartData: [0, 0, 0, 0, 0, 0, 0] as number[]
   });
 
-  // State untuk kontrol tampilan "Lihat Semua"
   const [showAll, setShowAll] = useState(false);
 
   const getGreeting = () => {
@@ -23,7 +22,12 @@ export default function DashboardStats() {
 
   useEffect(() => {
     async function fetchStats() {
-      const hariIniStr = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hariIniStr = `${year}-${month}-${day}`;
+
       const { data: bookings } = await supabase.from('Booking').select('*');
       const { data: jadwal } = await supabase.from('jadwal').select('*');
       
@@ -41,7 +45,6 @@ export default function DashboardStats() {
           }))
           .sort((a, b) => a.jam.localeCompare(b.jam));
 
-        // Kalkulasi Grafik 7 Hari Terakhir Berdasarkan Data Asli
         const dailyTotals = [0, 0, 0, 0, 0, 0, 0];
         const today = new Date();
 
@@ -55,7 +58,7 @@ export default function DashboardStats() {
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDays >= 0 && diffDays < 7) {
-              const index = 6 - diffDays; // Urut dari 6 hari lalu ke hari ini
+              const index = 6 - diffDays;
               dailyTotals[index] += harga;
             }
           }
@@ -76,10 +79,7 @@ export default function DashboardStats() {
     fetchStats();
   }, []);
 
-  // Logika menentukan jadwal yang tampil berdasarkan state showAll
   const displayedJadwal = showAll ? stats.jadwalHariIni : stats.jadwalHariIni.slice(0, 3);
-  
-  // Mencari nilai tertinggi untuk persentase tinggi batang grafik
   const maxChartValue = Math.max(...stats.chartData, 1);
 
   return (
@@ -89,7 +89,6 @@ export default function DashboardStats() {
         <p className="text-slate-500 mt-1">Semoga operasional VividLens hari ini berjalan lancar.</p>
       </section>
 
-      {/* Bagian Jadwal Hari Ini - PADAT & MODERN */}
       <section className="rounded-3xl border border-[#ADE1FB] bg-[#F0F7FF] p-6 shadow-sm">
         <div className="flex justify-between items-center mb-4">
             <div>
@@ -123,7 +122,6 @@ export default function DashboardStats() {
                         </div>
                     ))}
                     
-                    {/* Tombol Toggle yang Berfungsi */}
                     {stats.jadwalHariIni.length > 3 && (
                         <button 
                             onClick={() => setShowAll(!showAll)}
@@ -137,7 +135,6 @@ export default function DashboardStats() {
         </div>
       </section>
 
-      {/* Summary Cards */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
