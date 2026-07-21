@@ -236,7 +236,7 @@ export default function DataKlien() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-full text-left text-sm sm:text-base border-separate border-spacing-y-3">
+            <table className="w-full min-w-[700px] text-left text-sm sm:text-base border-separate border-spacing-y-3">
               <thead className="text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-3 sm:px-5 font-medium">Tanggal</th>
@@ -250,16 +250,16 @@ export default function DataKlien() {
               <tbody>
                 {clientBookings.sort((a, b) => new Date(b.tanggal_foto || '').getTime() - new Date(a.tanggal_foto || '').getTime()).map((b, i) => (
                   <tr key={i} className="border-b border-slate-100 last:border-b-0">
-                    <td className="py-3 px-3 sm:px-5 text-slate-900">{b.tanggal_foto ? new Date(b.tanggal_foto).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</td>
+                    <td className="py-3 px-3 sm:px-5 text-slate-900 whitespace-nowrap">{b.tanggal_foto ? new Date(b.tanggal_foto).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</td>
                     <td className="py-3 px-3 sm:px-5 text-slate-900">{b.paket || '-'}</td>
                     <td className="py-3 px-3 sm:px-5 text-slate-900">{b.lokasi || '-'}</td>
-                    <td className="py-3 px-3 sm:px-5 text-slate-900">{formatMoney(b.total_price)}</td>
-                    <td className="py-3 px-3 sm:px-5">
+                    <td className="py-3 px-3 sm:px-5 text-slate-900 whitespace-nowrap">{formatMoney(b.total_price)}</td>
+                    <td className="py-3 px-3 sm:px-5 whitespace-nowrap">
                       <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClasses(b.status || '')}`}>
                         {b.status || '-'}
                       </span>
                     </td>
-                    <td className="py-3 px-3 sm:px-5 text-slate-900">{b.workflow_status || '-'}</td>
+                    <td className="py-3 px-3 sm:px-5 text-slate-900 whitespace-nowrap">{b.workflow_status || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -304,30 +304,30 @@ export default function DataKlien() {
           </div>
 
         <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
-          <table className="w-full min-w-full table-fixed text-left text-sm sm:text-base border-collapse">
+          <table className="w-full min-w-[700px] text-left text-sm sm:text-base border-collapse">
             <thead className="sticky top-0 z-20 bg-slate-50 shadow-[0_1px_0_0_#e2e8f0]">
               <tr className="text-slate-500 uppercase text-[10px] tracking-[0.18em]">
-                <th className="py-3 px-3 sm:px-5 w-[28%]">Nama</th>
-                <th className="py-3 px-3 sm:px-5 w-[20%]">WA</th>
-                <th className="py-3 px-3 sm:px-5 w-[10%]">Booking</th>
-                <th className="py-3 px-3 sm:px-5 w-[16%]">Total</th>
-                <th className="py-3 px-3 sm:px-5 w-[16%]">Status</th>
-                <th className="py-3 px-3 sm:px-5 w-[10%]">Aksi</th>
+                <th className="py-3 px-3 sm:px-5">Nama</th>
+                <th className="py-3 px-3 sm:px-5">WA</th>
+                <th className="py-3 px-3 sm:px-5">Booking</th>
+                <th className="py-3 px-3 sm:px-5">Total</th>
+                <th className="py-3 px-3 sm:px-5">Status</th>
+                <th className="py-3 px-3 sm:px-5">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {filteredDataKlien.map((k, i) => (
                 <tr key={i} className="border-b border-slate-100 bg-transparent hover:bg-slate-50 transition duration-150" style={{ height: '64px' }}>
-                  <td className="py-3 px-3 sm:px-5 text-slate-900">{k.nama}</td>
-                  <td className="py-3 px-3 sm:px-5 text-slate-700">{k.whatsapp || '-'}</td>
-                  <td className="py-3 px-3 sm:px-5 text-slate-700">{k.booking}x</td>
-                  <td className="py-3 px-3 sm:px-5 text-slate-700">Rp {(k.total / 1000).toLocaleString()} rb</td>
-                  <td className="py-3 px-3 sm:px-5">
+                  <td className="py-3 px-3 sm:px-5 text-slate-900 font-medium">{k.nama}</td>
+                  <td className="py-3 px-3 sm:px-5 text-slate-700 whitespace-nowrap">{k.whatsapp || '-'}</td>
+                  <td className="py-3 px-3 sm:px-5 text-slate-700 whitespace-nowrap">{k.booking}x</td>
+                  <td className="py-3 px-3 sm:px-5 text-slate-700 whitespace-nowrap">Rp {(k.total / 1000).toLocaleString()} rb</td>
+                  <td className="py-3 px-3 sm:px-5 whitespace-nowrap">
                     <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusBadgeClasses(k.latestStatus)}`}>
                       {k.latestStatus || '-'}
                     </span>
                   </td>
-                  <td className="py-3 px-3 sm:px-5">
+                  <td className="py-3 px-3 sm:px-5 whitespace-nowrap">
                     <button onClick={() => setSelectedKlien(k)} className="text-indigo-600 hover:text-indigo-900 font-semibold">Detail</button>
                   </td>
                 </tr>
