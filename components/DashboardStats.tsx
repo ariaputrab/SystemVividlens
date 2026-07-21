@@ -22,12 +22,7 @@ export default function DashboardStats() {
 
   useEffect(() => {
     async function fetchStats() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hariIniStr = `${year}-${month}-${day}`;
-
+      const hariIniStr = new Date().toISOString().split('T')[0];
       const { data: bookings } = await supabase.from('Booking').select('*');
       const { data: jadwal } = await supabase.from('jadwal').select('*');
       
