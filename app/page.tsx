@@ -1,63 +1,157 @@
-import Image from "next/image";
+'use client';
+import { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  CalendarDays, 
+  Clock, 
+  FileText, 
+  MessageSquare, 
+  Calendar, 
+  Image as ImageIcon, 
+  Users, 
+  BarChart3,
+  Menu,
+  X
+} from 'lucide-react';
+import DashboardStats from '../components/DashboardStats';
+import BookingManager from '../components/BookingManager';
+import JadwalManager from '../components/JadwalManager'; 
+import InvoiceManager from '../components/InvoiceManager'; 
+import ChatFGManager from '../components/ChatFGManager';
+import CalendarManager from '../components/CalendarManager';
+import Laporan from '../components/Laporan';
+import DataKlien from '../components/DataKlien';
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+const menuConfig: Record<string, any> = {
+  'Dashboard': LayoutDashboard,
+  'Booking': CalendarDays,
+  'Jadwal': Clock,
+  'Invoice': FileText,
+  'Chat FG': MessageSquare,
+  'Calendar': Calendar,
+  'Gallery': ImageIcon,
+  'Data Klien': Users,
+  'Laporan': BarChart3,
+};
+
+export default function VividLensERP() {
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menu = ['Dashboard', 'Booking', 'Jadwal', 'Invoice', 'Chat FG', 'Calendar', 'Gallery', 'Data Klien', 'Laporan'];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'Dashboard': return <DashboardStats />;
+      case 'Booking': return <BookingManager />;
+      case 'Jadwal': return <JadwalManager />;
+      case 'Invoice': return <InvoiceManager />;
+      case 'Chat FG': return <ChatFGManager />;
+      case 'Calendar': return <CalendarManager />;
+      case 'Laporan': return <Laporan />;
+      case 'Data Klien': return <DataKlien />;
+      
+      case 'Gallery': 
+        return (
+          <div className="w-full h-[calc(100vh-140px)] rounded-3xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+            <iframe 
+              src="https://vividlens-gallery2026.vercel.app/admin" 
+              className="w-full h-full"
+              title="Gallery Portal"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+        );
+      
+      default: return <div className="p-10 text-slate-500">Konten {activeTab} sedang dalam pengembangan...</div>;
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-[#F0F7FF] relative overflow-hidden">
+      {/* Overlay hitam transparan saat menu HP dibuka */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={() => setIsMobileMenuOpen(false)} 
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden"
+        />
+      )}
+
+      {/* Sidebar (Desktop: Hover-to-expand, Mobile: Drawer slide-in) */}
+      <aside className={`group peer fixed inset-y-0 left-0 z-50 flex flex-col bg-white border-r border-[#ADE1FB]/30 p-3 transition-all duration-300 ease-in-out shadow-sm overflow-hidden ${
+        isMobileMenuOpen ? 'w-64 translate-x-0' : '-translate-x-full lg:translate-x-0 w-20 hover:w-64'
+      }`}>
+        
+        {/* Header / Logo */}
+        <div className="flex h-20 items-center justify-between px-1 mb-2 whitespace-nowrap overflow-hidden">
+          <div className="flex items-center gap-3 w-full">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#266CA9] text-white font-bold text-lg shadow-sm">
+              V
+            </div>
+            <span className={`text-xl font-bold text-[#266CA9] tracking-tight transition-opacity duration-300 ${
+              isMobileMenuOpen ? 'opacity-150' : 'opacity-0 group-hover:opacity-100'
+            }`}>
+              VividLens
+            </span>
+          </div>
+          {/* Tombol close khusus HP */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden p-2 text-slate-500 hover:text-slate-800"
           >
-            Documentation
-          </a>
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Menu Navigasi */}
+        <nav className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden">
+          {menu.map((item) => {
+            const Icon = menuConfig[item] || LayoutDashboard;
+            const isActive = activeTab === item;
+
+            return (
+              <button 
+                key={item} 
+                onClick={() => {
+                  setActiveTab(item);
+                  setIsMobileMenuOpen(false); // Tutup menu di HP saat diklik
+                }}
+                className={`w-full flex items-center gap-3 px-1.5 py-1.5 rounded-2xl text-sm font-semibold transition-all whitespace-nowrap ${
+                  isActive 
+                    ? 'text-white' 
+                    : 'text-[#0F2573] hover:bg-[#ADE1FB]/20 hover:text-[#266CA9]'
+                }`}
+              >
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-all shadow-sm ${
+                  isActive ? 'bg-[#266CA9] text-white' : 'bg-transparent text-[#0F2573]'
+                }`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <span className={`transition-opacity duration-300 ${
+                  isMobileMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                } ${isActive ? 'text-[#0F2573] font-bold' : ''}`}>
+                  {item}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto lg:pl-20 transition-all duration-300 ease-in-out w-full">
+        <header className="sticky top-0 z-20 py-4 px-6 lg:px-10 bg-[#F0F7FF]/80 backdrop-blur-sm flex items-center justify-between border-b border-[#ADE1FB]/20 lg:border-none">
+          <div className="flex items-center gap-4">
+            {/* Tombol Hamburger untuk memunculkan menu di HP */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2.5 rounded-xl bg-white border border-[#ADE1FB]/40 text-[#266CA9] shadow-xs active:scale-95 transition"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="font-bold text-lg text-[#0F2573]">{activeTab}</h1>
+          </div>
+        </header>
+        <div className="p-4 lg:px-10 lg:pb-10">
+          {renderContent()}
         </div>
       </main>
     </div>
