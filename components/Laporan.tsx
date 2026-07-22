@@ -50,7 +50,7 @@ export default function Laporan() {
   const omzetBersih = totalOmzet - totalFreelance;
 
   const sudahLunas = filteredData.filter(item => item.payment_status === 'LUNAS')
-                                .reduce((sum, item) => sum + (Number(item.total_price || 0)), 0);
+                              .reduce((sum, item) => sum + (Number(item.total_price || 0)), 0);
   const sisaTagihan = totalOmzet - sudahLunas;
 
   if (loading) return <div className="p-10 text-center text-slate-500">Memuat data laporan...</div>;
@@ -63,7 +63,7 @@ export default function Laporan() {
         <select 
           value={selectedMonth} 
           onChange={(e) => setSelectedMonth(Number(e.target.value))}
-          className="border border-slate-200 rounded-lg p-2 text-sm font-semibold text-slate-700 cursor-pointer"
+          className="border border-slate-200 rounded-lg p-2 text-sm font-semibold text-slate-700 cursor-pointer bg-white"
         >
           {['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'].map((nama, i) => (
             <option key={i + 1} value={i + 1}>{nama}</option>
@@ -71,8 +71,8 @@ export default function Laporan() {
         </select>
       </div>
 
-      {/* Kartu Ringkasan (5 Kolom: Omzet, Fee Freelance, Bersih, Lunas, Sisa) */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      {/* Kartu Ringkasan */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
           <p className="text-slate-500 text-xs font-semibold">Total Omzet (Kotor)</p>
           <p className="text-xl font-black text-[#0F2573] mt-1">Rp {totalOmzet.toLocaleString('id-ID')}</p>
@@ -89,65 +89,111 @@ export default function Laporan() {
           <p className="text-green-600 text-xs font-semibold">Sudah Lunas</p>
           <p className="text-xl font-black text-green-700 mt-1">Rp {sudahLunas.toLocaleString('id-ID')}</p>
         </div>
-        <div className="bg-red-50 p-5 rounded-3xl border border-red-100">
+        <div className="bg-red-50 p-5 rounded-3xl border border-red-100 sm:col-span-2 md:col-span-1">
           <p className="text-red-600 text-xs font-semibold">Sisa Tagihan</p>
           <p className="text-xl font-black text-red-700 mt-1">Rp {sisaTagihan.toLocaleString('id-ID')}</p>
         </div>
       </div>
 
-      {/* Tabel Detail */}
+      {/* Tampilan List Data: Berubah jadi Card di HP, Tabel di Desktop */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-slate-600 text-sm font-bold uppercase tracking-wider">
-            <tr>
-              <th className="p-4">Tanggal</th>
-              <th className="p-4">Nama Klien</th>
-              <th className="p-4">Info FG & Freelance</th>
-              <th className="p-4">Harga / Bersih</th>
-              <th className="p-4 text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredData.length > 0 ? filteredData.map((item) => {
-              const harga = Number(item.total_price || 0);
-              const feeFreelance = Number(item.freelance_fee || 0);
-              const bersih = harga - feeFreelance;
+        {filteredData.length > 0 ? (
+          <>
+            {/* Tampilan Mobile (Card View) */}
+            <div className="block md:hidden divide-y divide-slate-100 p-4 space-y-4">
+              {filteredData.map((item) => {
+                const harga = Number(item.total_price || 0);
+                const feeFreelance = Number(item.freelance_fee || 0);
+                const bersih = harga - feeFreelance;
 
-              return (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4 text-sm font-medium text-slate-600">{item.tanggal}</td>
-                  <td className="p-4">
-                    <p className="font-bold text-slate-900 text-base">{item.nama_klien}</p>
-                    <p className="text-xs text-slate-400 italic">{item.keterangan || '-'}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-sm font-semibold text-slate-800">{item.nama_fg || '-'}</p>
-                    <p className="text-xs text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="font-black text-slate-950 text-base">
-                      Rp {harga.toLocaleString('id-ID')}
-                    </p>
-                    <p className="text-xs font-bold text-emerald-600">
-                      Bersih: Rp {bersih.toLocaleString('id-ID')}
-                    </p>
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className={`px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest ${
-                      item.payment_status === 'LUNAS' 
-                        ? 'bg-green-500 text-white shadow-sm' 
-                        : 'bg-red-500 text-white shadow-sm'
-                    }`}>
-                      {item.payment_status || 'DP'}
-                    </span>
-                  </td>
-                </tr>
-              );
-            }) : (
-              <tr><td colSpan={5} className="p-10 text-center text-slate-400">Tidak ada data untuk bulan ini.</td></tr>
-            )}
-          </tbody>
-        </table>
+                return (
+                  <div key={item.id} className="pt-4 first:pt-0 pb-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-400">{item.tanggal}</span>
+                        <h3 className="font-bold text-slate-900 text-base">{item.nama_klien}</h3>
+                        <p className="text-xs text-slate-400 italic">{item.keterangan || '-'}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest ${
+                        item.payment_status === 'LUNAS' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                      }`}>
+                        {item.payment_status || 'DP'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Fotografer</span>
+                        <span className="font-semibold text-slate-800">{item.nama_fg || '-'}</span>
+                        <span className="block text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Keuangan</span>
+                        <span className="font-black text-slate-900">Rp {harga.toLocaleString('id-ID')}</span>
+                        <span className="block font-bold text-emerald-600">Bersih: Rp {bersih.toLocaleString('id-ID')}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tampilan Desktop (Table View) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-600 text-sm font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="p-4">Tanggal</th>
+                    <th className="p-4">Nama Klien</th>
+                    <th className="p-4">Info FG & Freelance</th>
+                    <th className="p-4">Harga / Bersih</th>
+                    <th className="p-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredData.map((item) => {
+                    const harga = Number(item.total_price || 0);
+                    const feeFreelance = Number(item.freelance_fee || 0);
+                    const bersih = harga - feeFreelance;
+
+                    return (
+                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-4 text-sm font-medium text-slate-600">{item.tanggal}</td>
+                        <td className="p-4">
+                          <p className="font-bold text-slate-900 text-base">{item.nama_klien}</p>
+                          <p className="text-xs text-slate-400 italic">{item.keterangan || '-'}</p>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-sm font-semibold text-slate-800">{item.nama_fg || '-'}</p>
+                          <p className="text-xs text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</p>
+                        </td>
+                        <td className="p-4">
+                          <p className="font-black text-slate-950 text-base">
+                            Rp {harga.toLocaleString('id-ID')}
+                          </p>
+                          <p className="text-xs font-bold text-emerald-600">
+                            Bersih: Rp {bersih.toLocaleString('id-ID')}
+                          </p>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest ${
+                            item.payment_status === 'LUNAS' 
+                              ? 'bg-green-500 text-white shadow-sm' 
+                              : 'bg-red-500 text-white shadow-sm'
+                          }`}>
+                            {item.payment_status || 'DP'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <p className="p-10 text-center text-slate-400">Tidak ada data untuk bulan ini.</p>
+        )}
       </div>
     </div>
   );
