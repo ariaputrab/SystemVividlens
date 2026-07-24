@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
-import Modal from '../components/Modal';
 import RescheduleModal from '../components/RescheduleModal';
 
 export default function JadwalManager() {
@@ -59,7 +58,6 @@ export default function JadwalManager() {
 
   useEffect(() => { fetchAllData(); }, []);
 
-  // Refresh detail modal data whenever it opens to ensure latest booking status
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
@@ -137,11 +135,9 @@ export default function JadwalManager() {
   const updateStatus = async (id: string, field: string, value: any) => {
     const item = jadwal.find(j => j.id === id);
     
-    // Update jadwal table
     const { error: jadwalError } = await supabase.from('jadwal').update({ [field]: value }).eq('id', id);
 
     if (!jadwalError) {
-      // If payment_status changed in jadwal, also update status in Booking table
       if (field === 'payment_status' && item?.booking_id) {
         await supabase.from('Booking').update({ status: value }).eq('id', item.booking_id);
       }
@@ -166,7 +162,6 @@ export default function JadwalManager() {
 
       await fetchAllData();
       
-      // After fetchAllData, refetch latest data to ensure modal gets newest state
       setTimeout(async () => {
         const { data: latestJadwal } = await supabase.from('jadwal').select('*');
         const { data: latestBookings } = await supabase.from('Booking').select('*');
@@ -360,11 +355,10 @@ export default function JadwalManager() {
         />
       )}
 
-      {/* Detail Modal dengan Tabs - Minimalist Design */}
+      {/* Detail Modal dengan Tabs */}
       {detailModalConfig.isOpen && detailModalConfig.item && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
-            {/* Header - Minimalist */}
             <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">{detailModalConfig.item.nama_klien}</h2>
@@ -373,7 +367,6 @@ export default function JadwalManager() {
               <button onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
             </div>
 
-            {/* Tabs - Minimalist */}
             <div className="border-b border-slate-100 px-6">
               <div className="flex gap-6">
                 <button
@@ -409,7 +402,6 @@ export default function JadwalManager() {
               </div>
             </div>
 
-            {/* Tab Content - Minimalist */}
             <div className="p-6">
               {detailModalConfig.activeTab === 'details' && (
                 <div className="space-y-5">
@@ -554,17 +546,13 @@ export default function JadwalManager() {
 
                   <div className="space-y-3">
                     <button
-                      onClick={() => {
-                        updateStatus(detailModalConfig.item.id, 'payment_status', 'DP');
-                      }}
+                      onClick={() => updateStatus(detailModalConfig.item.id, 'payment_status', 'DP')}
                       className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
                     >
                       Set DP
                     </button>
                     <button
-                      onClick={() => {
-                        updateStatus(detailModalConfig.item.id, 'payment_status', 'LUNAS');
-                      }}
+                      onClick={() => updateStatus(detailModalConfig.item.id, 'payment_status', 'LUNAS')}
                       className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
                     >
                       Set LUNAS
@@ -612,7 +600,6 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
               )}
             </div>
 
-            {/* Action Buttons - Minimalist */}
             <div className="border-t border-slate-200 px-6 py-4 space-y-3">
               <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 mb-2">
                 <div className="flex items-center gap-2">
@@ -638,7 +625,6 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                   Reschedule
                 </button>
 
-                {/* Tombol Set Calendar Manual */}
                 <button
                   onClick={async () => {
                     const detail = detailModalConfig.detail;
@@ -666,17 +652,17 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
 
       {/* Alert Modal */}
       {alertModal.isOpen && (
-        <Modal isOpen={alertModal.isOpen} onClose={() => setAlertModal({ isOpen: false, message: '' })}>
-          <div className="p-6 text-center">
-            <p className="text-sm text-slate-700 mb-6">{alertModal.message}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-slate-800 text-center">
+            <p className="text-sm text-slate-700 mb-6 whitespace-pre-wrap">{alertModal.message}</p>
             <button
               onClick={() => setAlertModal({ isOpen: false, message: '' })}
-              className="bg-slate-900 hover:bg-black text-white px-6 py-2 rounded-lg text-sm font-medium transition"
+              className="w-full bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
             >
               OK
             </button>
           </div>
-        </Modal>
+        </div>
       )}
 
       {/* Modal Konfirmasi Input FG */}
