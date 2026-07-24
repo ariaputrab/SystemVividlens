@@ -588,15 +588,25 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
 
                   <button
                     onClick={() => {
-                      let phone = detailModalConfig.detail.whatsapp || "";
+                      let phone = detailModalConfig.detail?.whatsapp || "";
                       if (phone.startsWith('0')) {
                         phone = '62' + phone.slice(1);
                       } else {
                         phone = phone.replace(/\D/g, '');
                       }
 
-                      const chat = `Halo Kak ${detailModalConfig.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}\n📍 Lokasi : ${detailModalConfig.detail.lokasi || '-'}\n🏫 Kampus : ${detailModalConfig.detail.kampus || '-'}\n📌 Paket : ${detailModalConfig.detail.paket || '-'}\n📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
-                      
+                      const nama = detailModalConfig.item?.nama_klien || '';
+                      const tanggal = new Date(detailModalConfig.item?.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                      const jam = detailModalConfig.item?.jam?.substring(0, 5) || '';
+                      const lokasi = detailModalConfig.detail?.lokasi || '-';
+                      const kampus = detailModalConfig.detail?.kampus || '-';
+                      const paket = detailModalConfig.detail?.paket || '-';
+                      const wa = detailModalConfig.detail?.whatsapp || 'Tidak tersedia';
+                      const dp = (detailModalConfig.detail?.dp_amount || 0).toLocaleString('id-ID');
+                      const sisa = (detailModalConfig.detail?.remaining_balance || 0).toLocaleString('id-ID');
+
+                      const chat = `Halo Kak ${nama} \u{1F60A}\nMengingatkan untuk jadwal photoshoot ya \u{1F4F8}\u{2728}\n\n\u{1F4C5} Tanggal : ${tanggal}\n\u{23F0} Jam : ${jam}\n\u{1F4CD} Lokasi : ${lokasi}\n\u{1F3EB} Kampus : ${kampus}\n\u{1F4CC} Paket : ${paket}\n\u{1F4DE} WhatsApp : ${wa}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak \u{1F64F}\n\u{1F4CC} DP : Rp ${dp}\n\u{1F4B0} Sisa pembayaran : Rp ${sisa}\n\n\u{1F4B3} Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya \u{1F60A}\n\u{1F4E9} Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${wa} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H \u{2728}\u{1F4F8}\u{1F393}`;
+
                       const encodedMessage = encodeURIComponent(chat);
                       window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
                     }}
