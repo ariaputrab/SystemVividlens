@@ -567,7 +567,7 @@ export default function JadwalManager() {
                     {`Halo Kak ${detailModalConfig.item.nama_klien} 😊
 Mengingatkan untuk jadwal photoshoot ya 📸✨
 
-🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID')}
+🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
 ⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}
 📍 Lokasi : ${detailModalConfig.detail.lokasi || '-'}
 🏫 Kampus : ${detailModalConfig.detail.kampus || '-'}
@@ -588,13 +588,21 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
 
                   <button
                     onClick={() => {
-                      const chat = `Halo Kak ${detailModalConfig.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID')}\n⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}\n📍 Lokasi : ${detailModalConfig.detail.lokasi}\n🏫 Kampus : ${detailModalConfig.detail.kampus}\n📌 Paket : ${detailModalConfig.detail.paket}\n📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
-                      navigator.clipboard.writeText(chat);
-                      setAlertModal({ isOpen: true, message: "Chat berhasil disalin!" });
+                      let phone = detailModalConfig.detail.whatsapp || "";
+                      if (phone.startsWith('0')) {
+                        phone = '62' + phone.slice(1);
+                      } else {
+                        phone = phone.replace(/\D/g, '');
+                      }
+
+                      const chat = `Halo Kak ${detailModalConfig.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}\n📍 Lokasi : ${detailModalConfig.detail.lokasi || '-'}\n🏫 Kampus : ${detailModalConfig.detail.kampus || '-'}\n📌 Paket : ${detailModalConfig.detail.paket || '-'}\n📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
+                      
+                      const encodedMessage = encodeURIComponent(chat);
+                      window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
                     }}
-                    className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-sm"
                   >
-                    Copy Chat
+                    <span>💬</span> Kirim ke WhatsApp Klien
                   </button>
                 </div>
               )}
