@@ -125,12 +125,12 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setAlertModal({ isOpen: true, message: `Status berhasil diubah ke 'Done' dan jadwal tersinkronisasi dengan durasi ${durasiMenit} menit!` });
+        setAlertModal({ isOpen: true, message: `Jadwal berhasil disinkronisasi ke Google Calendar dengan durasi ${durasiMenit} menit!` });
       } else {
-        setAlertModal({ isOpen: true, message: "Status berhasil disimpan di database, namun Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
+        setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
       }
     } catch (err) {
-      setAlertModal({ isOpen: true, message: "Status tersimpan, namun Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
+      setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
     }
   };
 
@@ -614,7 +614,7 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
 
             {/* Action Buttons - Minimalist */}
             <div className="border-t border-slate-200 px-6 py-4 space-y-3">
-              <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 mb-4">
+              <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 mb-2">
                 <div className="flex items-center gap-2">
                   <span>📅</span>
                   <span>{new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {detailModalConfig.item.jam?.substring(0, 5)}</span>
@@ -637,6 +637,21 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                 >
                   Reschedule
                 </button>
+
+                {/* Tombol Set Calendar Manual */}
+                <button
+                  onClick={async () => {
+                    const detail = detailModalConfig.detail;
+                    const item = detailModalConfig.item;
+                    if (item && detail) {
+                      await syncToGoogle(item, detail);
+                    }
+                  }}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition text-sm"
+                >
+                  Set Calendar
+                </button>
+
                 <button
                   onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })}
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-lg transition text-sm"
@@ -666,8 +681,8 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
 
       {/* Modal Konfirmasi Input FG */}
       {modalConfig.isOpen && (
-        <Modal isOpen={modalConfig.isOpen} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}>
-          <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-slate-800">
             <h3 className="text-lg font-bold text-slate-900 mb-2">Simpan Perubahan FG</h3>
             <p className="text-sm text-slate-600 mb-6">Apakah kamu yakin ingin mengubah fotografer untuk klien ini?</p>
             <div className="flex gap-3">
@@ -685,7 +700,7 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
               </button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );
