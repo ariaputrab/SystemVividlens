@@ -263,15 +263,36 @@ export default function JadwalManager() {
           <tbody>
             {filteredJadwal.map((item) => {
               const detail = bookings.find(b => b.id === item.booking_id) || {};
+              const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "" || item.nama_fg === "-";
+
               return (
-                <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition ${item.is_done ? 'bg-green-50/30' : ''}`}>
+                <tr 
+                  key={item.id} 
+                  className={`border-b border-slate-50 transition ${
+                    isFgEmpty 
+                      ? 'bg-red-50/80 border-l-4 border-red-500' 
+                      : item.is_done ? 'bg-green-50/30' : 'hover:bg-slate-50'
+                  }`}
+                >
                   <td className="px-3 py-2 sm:px-4 sm:py-3 font-semibold text-slate-900 cursor-pointer hover:text-indigo-600" onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })}>{item.nama_klien}</td>
-                  <td className="px-3 py-2 sm:px-4 sm:py-3">
-                    <input type="text" value={item.nama_fg || ''}
-                      onChange={(e) => { const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); setJadwal(updatedJadwal); }}
-                      onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
-                      className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs w-24 focus:ring-1 focus:ring-indigo-500 outline-none"
-                    />
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 relative">
+                    <div className="flex items-center gap-1.5">
+                      {isFgEmpty && (
+                        <span className="absolute -top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 animate-pulse uppercase tracking-wider shadow-sm z-10">
+                          ⚠️ Belum Ada FG
+                        </span>
+                      )}
+                      <input type="text" value={item.nama_fg || ''}
+                        onChange={(e) => { const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); setJadwal(updatedJadwal); }}
+                        onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
+                        className={`border rounded-lg px-2 py-1 text-xs w-28 focus:ring-1 outline-none transition ${
+                          isFgEmpty 
+                            ? 'bg-white border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500' 
+                            : 'bg-slate-50 border-slate-200 focus:ring-indigo-500'
+                        }`}
+                        placeholder="Nama FG..."
+                      />
+                    </div>
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm font-medium text-slate-900">
                     <div className="flex items-center gap-2">
@@ -607,51 +628,20 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                     setSelectedBooking({
                       id: detailModalConfig.detail.id,
                       booking_id: detailModalConfig.item.booking_id,
-                      tanggal_foto: detailModalConfig.item.tanggal,
-                      jam_foto: detailModalConfig.item.jam,
-                      paket: detailModalConfig.detail.paket
+                      nama_klien: detailModalConfig.item.nama_klien,
+                      tanggal: detailModalConfig.item.tanggal,
+                      jam: detailModalConfig.item.jam
                     });
                   }}
-                  className="flex-1 bg-slate-900 hover:bg-black text-white font-medium py-2 rounded text-sm transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2.5 rounded-lg transition text-sm"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Ubah Jadwal
-                </button>
-                <button
-                  onClick={() => {
-                    updateStatus(detailModalConfig.item.id, 'is_done', true);
-                    setDetailModalConfig({ ...detailModalConfig, isOpen: false });
-                  }}
-                  disabled={detailModalConfig.item.is_done}
-                  className={`flex-1 font-medium py-2 rounded text-sm transition flex items-center justify-center gap-2 ${
-                    detailModalConfig.item.is_done
-                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
-                      : 'bg-slate-900 hover:bg-black text-white'
-                  }`}
-                >
-                  {detailModalConfig.item.is_done ? (
-                    <>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Selesai
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Selesaikan
-                    </>
-                  )}
+                  Reschedule
                 </button>
                 <button
                   onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })}
-                  className="flex-1 border border-slate-300 hover:border-slate-400 text-slate-700 font-medium py-2 rounded text-sm transition"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-lg transition text-sm"
                 >
-                  Batal
+                  Tutup
                 </button>
               </div>
             </div>
@@ -659,50 +649,44 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
         </div>
       )}
 
-      <Modal
-        isOpen={modalConfig.isOpen}
-        onClose={() => { setModalConfig({ ...modalConfig, isOpen: false }); fetchAllData(); }}
-        onConfirm={modalConfig.type === 'FG'
-          ? () => updateStatus(modalConfig.id, modalConfig.field, modalConfig.value)
-          : () => {
-            const wa = modalConfig.data?.detail.whatsapp || "Tidak tersedia";
-            const chat = `Halo Kak ${modalConfig.data?.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${modalConfig.data?.item.tanggal}\n⏰ Jam : ${modalConfig.data?.item.jam?.substring(0, 5)}\n📍 Lokasi : ${modalConfig.data?.detail.lokasi}\n🏫 Kampus : ${modalConfig.data?.detail.kampus}\n📌 Paket : ${modalConfig.data?.detail.paket}\n📞 WhatsApp : ${wa}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${modalConfig.data?.detail.dp_amount?.toLocaleString()}\n📌 Sisa pembayaran : Rp ${modalConfig.data?.detail.remaining_balance?.toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${modalConfig.data?.item.nama_klien} di nomor ${wa} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
-            navigator.clipboard.writeText(chat);
-            setAlertModal({ isOpen: true, message: "Format chat berhasil disalin!" });
-            setModalConfig({ ...modalConfig, isOpen: false });
-          }
-        }
-        title={modalConfig.type === 'FG' ? "Konfirmasi" : "Format Chat Pelunasan"}
-        message={modalConfig.type === 'FG' ? "Simpan perubahan Nama FG ini?" :
-          <span className="text-xs bg-slate-50 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap block">{`Halo Kak ${modalConfig.data?.item.nama_klien} 😊
-           Mengingatkan untuk jadwal photoshoot ya 📸✨
+      {/* Alert Modal */}
+      {alertModal.isOpen && (
+        <Modal isOpen={alertModal.isOpen} onClose={() => setAlertModal({ isOpen: false, message: '' })}>
+          <div className="p-6 text-center">
+            <p className="text-sm text-slate-700 mb-6">{alertModal.message}</p>
+            <button
+              onClick={() => setAlertModal({ isOpen: false, message: '' })}
+              className="bg-slate-900 hover:bg-black text-white px-6 py-2 rounded-lg text-sm font-medium transition"
+            >
+              OK
+            </button>
+          </div>
+        </Modal>
+      )}
 
-            🗓 Tanggal : ${modalConfig.data?.item.tanggal}
-            ⏰ Jam : ${modalConfig.data?.item.jam?.substring(0, 5)}
-            📍 Lokasi : ${modalConfig.data?.detail.lokasi}
-            🏫 Kampus : ${modalConfig.data?.detail.kampus}
-            📌 Paket : ${modalConfig.data?.detail.paket}
-            📞 WhatsApp : ${modalConfig.data?.detail.whatsapp || "Tidak tersedia"}
-            Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
-            📌 DP : Rp ${modalConfig.data?.detail.dp_amount?.toLocaleString()}
-            📌 Sisa pembayaran : Rp ${modalConfig.data?.detail.remaining_balance?.toLocaleString()}
-
-            💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
-
-            Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
-            📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${modalConfig.data?.item.nama_klien} di nomor ${modalConfig.data?.detail.whatsapp || "Tidak tersedia"} sebelum sesi dimulai ya.
-
-            Terima kasih, sampai jumpa di hari H ✨📸🎓`}</span>
-        }
-      />
-
-      <Modal
-        isOpen={alertModal.isOpen}
-        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
-        onConfirm={() => setAlertModal({ ...alertModal, isOpen: false })}
-        title="Informasi"
-        message={alertModal.message}
-      />
+      {/* Modal Konfirmasi Input FG */}
+      {modalConfig.isOpen && (
+        <Modal isOpen={modalConfig.isOpen} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}>
+          <div className="p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Simpan Perubahan FG</h3>
+            <p className="text-sm text-slate-600 mb-6">Apakah kamu yakin ingin mengubah fotografer untuk klien ini?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => updateStatus(modalConfig.id, modalConfig.field, modalConfig.value)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition"
+              >
+                Ya, Simpan
+              </button>
+              <button
+                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-sm transition"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
