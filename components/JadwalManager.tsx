@@ -610,98 +610,12 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                       const encodedMessage = encodeURIComponent(chat);
                       window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
                     }}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition text-sm"
                   >
-                    <span>💬</span> Kirim ke WhatsApp Klien
+                    Kirim Pesan WhatsApp
                   </button>
                 </div>
               )}
-            </div>
-
-            <div className="border-t border-slate-200 px-6 py-4 space-y-3">
-              <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 mb-2">
-                <div className="flex items-center gap-2">
-                  <span>📅</span>
-                  <span>{new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {detailModalConfig.item.jam?.substring(0, 5)}</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setDetailModalConfig({ isOpen: false, item: null, detail: null, activeTab: 'details' });
-                    setSelectedBooking({
-                      id: detailModalConfig.detail.id,
-                      booking_id: detailModalConfig.item.booking_id,
-                      nama_klien: detailModalConfig.item.nama_klien,
-                      tanggal: detailModalConfig.item.tanggal,
-                      jam: detailModalConfig.item.jam
-                    });
-                  }}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2.5 rounded-lg transition text-sm"
-                >
-                  Reschedule
-                </button>
-
-                <button
-                  onClick={async () => {
-                    const detail = detailModalConfig.detail;
-                    const item = detailModalConfig.item;
-                    if (item && detail) {
-                      await syncToGoogle(item, detail);
-                    }
-                  }}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition text-sm"
-                >
-                  Set Calendar
-                </button>
-
-                <button
-                  onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-lg transition text-sm"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Alert Modal */}
-      {alertModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-slate-800 text-center">
-            <p className="text-sm text-slate-700 mb-6 whitespace-pre-wrap">{alertModal.message}</p>
-            <button
-              onClick={() => setAlertModal({ isOpen: false, message: '' })}
-              className="w-full bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Konfirmasi Input FG */}
-      {modalConfig.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-slate-800">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Simpan Perubahan FG</h3>
-            <p className="text-sm text-slate-600 mb-6">Apakah kamu yakin ingin mengubah fotografer untuk klien ini?</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => updateStatus(modalConfig.id, modalConfig.field, modalConfig.value)}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition"
-              >
-                Ya, Simpan
-              </button>
-              <button
-                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-sm transition"
-              >
-                Batal
-              </button>
             </div>
           </div>
         </div>
