@@ -22,7 +22,9 @@ export default function DashboardStats() {
 
   useEffect(() => {
     async function fetchStats() {
-      const hariIniStr = new Date().toISOString().split('T')[0];
+      // Menggunakan format tanggal lokal yang aman dari selisih timezone UTC
+      const hariIniStr = new Date().toLocaleDateString('en-CA');
+      
       const { data: bookings } = await supabase.from('Booking').select('*');
       const { data: jadwal } = await supabase.from('jadwal').select('*');
       
@@ -33,12 +35,17 @@ export default function DashboardStats() {
         const totalDPBooking = bookings.filter((b: any) => (b.status || '').toString().toLowerCase() === 'dp').length;
         
         const jadwalList = jadwal
-          .filter(j => j.tanggal === hariIniStr)
+          .filter(j => {
+            if (!j.tanggal) return false;
+            // Ambil bagian tanggal depannya saja (mengatasi format timestamp dari database)
+            const tanggalItem = j.tanggal.split('T')[0];
+            return tanggalItem === hariIniStr;
+          })
           .map(j => ({
             ...j,
             detailBooking: bookings.find(b => b.id === j.booking_id) || {}
           }))
-          .sort((a, b) => a.jam.localeCompare(b.jam));
+          .sort((a, b) => (a.jam || '').localeCompare(b.jam || ''));
 
         const dailyTotals = [0, 0, 0, 0, 0, 0, 0];
         const today = new Date();
