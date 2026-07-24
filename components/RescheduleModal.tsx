@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { useSession } from 'next-auth/react'; // 1. Import useSession
+import { useSession } from 'next-auth/react';
 import { supabase } from '../lib/supabase';
 
 export default function RescheduleModal({ booking, onClose, onSave }: any) {
-  const { data: session } = useSession(); // 2. Ambil session
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({
     tanggal_baru: '',
     jam_baru: '',
@@ -18,7 +18,6 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
       return;
     }
     
-    // 3. Pastikan token tersedia
     const accessToken = (session as any)?.accessToken;
     if (!accessToken) {
         alert("Sesi login berakhir. Silakan login ulang.");
@@ -38,7 +37,7 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
       const startDateTime = new Date(`${formData.tanggal_baru}T${formData.jam_baru}:00`);
       const endDateTime = new Date(startDateTime.getTime() + durasiMilidetik);
 
-      // 2. Update tabel Booking
+      // 2. Update tabel Booking (sesuaikan nama kolom database jika perlu)
       await supabase.from('Booking')
         .update({ 
           tanggal_foto: formData.tanggal_baru, 
@@ -55,7 +54,7 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
         })
         .eq('booking_id', booking.booking_id);
 
-      // 4. Sinkronisasi ke Google Calendar (Kirim accessToken di sini!)
+      // 4. Sinkronisasi ke Google Calendar
       const res = await fetch('/api/calendar/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,7 +63,7 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
           booking_id: booking.booking_id,
           new_start: startDateTime.toISOString(),
           new_end: endDateTime.toISOString(),
-          accessToken: accessToken // <--- INI KUNCI FIX 401
+          accessToken: accessToken
         }),
       });
 
@@ -104,7 +103,10 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Jadwal Saat Ini</p>
             <div className="flex items-center gap-2 text-slate-900 font-medium">
               <span>📅</span>
-              <span>{booking.tanggal_foto} • {booking.jam_foto}</span>
+              <span>
+                {booking?.tanggal ? new Date(booking.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : (booking?.tanggal_foto || '-')} 
+                {booking?.jam ? ` • ${booking.jam.substring(0, 5)}` : (booking?.jam_foto ? ` • ${booking.jam_foto.substring(0, 5)}` : '')}
+              </span>
             </div>
           </div>
         </div>
