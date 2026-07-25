@@ -10,21 +10,32 @@ export default function Laporan() {
 
   const fetchData = async () => {
     setLoading(true);
-    const { data: jadwalData } = await supabase.from('jadwal').select('*');
-    const { data: bookingData } = await supabase.from('Booking').select('id, total_price, freelance_fee, nama_fg, is_freelance_paid');
+    
+    // Ambil data dari kedua tabel
+    const { data: jadwalData, error: errJadwal } = await supabase.from('jadwal').select('*');
+    const { data: bookingData, error: errBooking } = await supabase.from('Booking').select('*');
+
+    console.log("Data Jadwal dari Supabase:", jadwalData);
+    console.log("Data Booking dari Supabase:", bookingData);
+
+    if (errJadwal) console.error("Error Jadwal:", errJadwal.message);
+    if (errBooking) console.error("Error Booking:", errBooking.message);
 
     if (jadwalData && bookingData) {
       const combined = jadwalData.map(j => {
-        const booking = bookingData.find(b => b.id === j.booking_id);
+        // Cocokkan berdasarkan booking_id atau id
+        const booking = bookingData.find(b => b.id === j.booking_id || b.id === j.id_booking);
         return { 
           ...j, 
           booking_id: booking?.id || j.booking_id,
-          total_price: booking?.total_price || 0,
-          freelance_fee: booking?.freelance_fee || 0,
+          total_price: booking?.total_price || j.total_price || 0,
+          freelance_fee: booking?.freelance_fee || j.freelance_fee || 0,
           nama_fg: booking?.nama_fg || j.nama_fg || '-',
-          is_freelance_paid: booking?.is_freelance_paid || false
+          is_freelance_paid: booking?.is_freelance_paid || false,
+          payment_status: booking?.payment_status || j.payment_status || 'DP'
         };
       });
+      console.log("Data Gabungan:", combined);
       setData(combined);
     }
     setLoading(false);
@@ -36,19 +47,21 @@ export default function Laporan() {
 
   useEffect(() => {
     const filtered = data.filter(item => {
-      if (!item.tanggal) return false;
-      const itemMonth = new Date(item.tanggal).getMonth() + 1;
+      const tanggalItem = item.tanggal || item.created_at;
+      if (!tanggalItem) return false;
+      const itemMonth = new Date(tanggalItem).getMonth() + 1;
       return itemMonth === Number(selectedMonth);
     });
 
     const sorted = filtered.sort((a, b) => {
-      return new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime();
+      const tA = new Date(a.tanggal || a.created_at).getTime();
+      const tB = new Date(b.tanggal || b.created_at).getTime();
+      return tA - tB;
     });
 
     setFilteredData(sorted);
   }, [data, selectedMonth]);
 
-  // Fungsi untuk mengubah status centang bayar freelance
   const toggleFreelancePaid = async (bookingId: string, currentStatus: boolean) => {
     if (!bookingId) return;
     const newStatus = !currentStatus;
@@ -78,7 +91,6 @@ export default function Laporan() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Filter */}
       <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
         <h2 className="font-bold text-slate-800 text-lg">Laporan Keuangan</h2>
         <select 
@@ -92,7 +104,6 @@ export default function Laporan() {
         </select>
       </div>
 
-      {/* Kartu Ringkasan */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
           <p className="text-slate-500 text-xs font-semibold">Total Omzet (Kotor)</p>
@@ -116,126 +127,66 @@ export default function Laporan() {
         </div>
       </div>
 
-      {/* Tampilan List Data */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         {filteredData.length > 0 ? (
-          <>
-            {/* Tampilan Mobile (Card View) */}
-            <div className="block md:hidden divide-y divide-slate-100 p-4 space-y-4">
-              {filteredData.map((item) => {
-                const harga = Number(item.total_price || 0);
-                const feeFreelance = Number(item.freelance_fee || 0);
-                const bersih = harga - feeFreelance;
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-slate-600 text-sm font-bold uppercase tracking-wider">
+                <tr>
+                  <th className="p-4">Tanggal</th>
+                  <th className="p-4">Nama Klien</th>
+                  <th className="p-4">Info FG & Fee Freelance</th>
+                  <th className="p-4">Harga / Bersih</th>
+                  <th className="p-4 text-center">Status Bayar FG</th>
+                  <th className="p-4 text-center">Status Klien</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredData.map((item) => {
+                  const harga = Number(item.total_price || 0);
+                  const feeFreelance = Number(item.freelance_fee || 0);
+                  const bersih = harga - feeFreelance;
 
-                return (
-                  <div key={item.id} className="pt-4 first:pt-0 pb-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-xs font-semibold text-slate-400">{item.tanggal}</span>
-                        <h3 className="font-bold text-slate-900 text-base">{item.nama_klien}</h3>
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 text-sm font-medium text-slate-600">{item.tanggal || '-'}</td>
+                      <td className="p-4">
+                        <p className="font-bold text-slate-900 text-base">{item.nama_klien || '-'}</p>
                         <p className="text-xs text-slate-400 italic">{item.keterangan || '-'}</p>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest ${
-                        item.payment_status === 'LUNAS' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                      }`}>
-                        {item.payment_status || 'DP'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl text-xs">
-                      <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Fotografer</span>
-                        <span className="font-semibold text-slate-800">{item.nama_fg || '-'}</span>
-                        <span className="block text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</span>
-                        
+                      </td>
+                      <td className="p-4">
+                        <p className="text-sm font-semibold text-slate-800">{item.nama_fg || '-'}</p>
+                        <p className="text-xs text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</p>
+                      </td>
+                      <td className="p-4">
+                        <p className="font-black text-slate-950 text-base">Rp {harga.toLocaleString('id-ID')}</p>
+                        <p className="text-xs font-bold text-emerald-600">Bersih: Rp {bersih.toLocaleString('id-ID')}</p>
+                      </td>
+                      <td className="p-4 text-center">
                         <button
                           onClick={() => toggleFreelancePaid(item.booking_id, item.is_freelance_paid)}
-                          className={`mt-2 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5 ${
                             item.is_freelance_paid 
-                              ? 'bg-emerald-100 text-emerald-700' 
-                              : 'bg-slate-200 text-slate-600'
+                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                           }`}
                         >
-                          {item.is_freelance_paid ? '✓ Fee Dibayar' : '○ Belum Dibayar'}
+                          {item.is_freelance_paid ? '✓ Sudah Dibayar' : '○ Belum Dibayar'}
                         </button>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Keuangan</span>
-                        <span className="font-black text-slate-900">Rp {harga.toLocaleString('id-ID')}</span>
-                        <span className="block font-bold text-emerald-600">Bersih: Rp {bersih.toLocaleString('id-ID')}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Tampilan Desktop (Table View) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 text-slate-600 text-sm font-bold uppercase tracking-wider">
-                  <tr>
-                    <th className="p-4">Tanggal</th>
-                    <th className="p-4">Nama Klien</th>
-                    <th className="p-4">Info FG & Fee Freelance</th>
-                    <th className="p-4">Harga / Bersih</th>
-                    <th className="p-4 text-center">Status Bayar FG</th>
-                    <th className="p-4 text-center">Status Klien</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((item) => {
-                    const harga = Number(item.total_price || 0);
-                    const feeFreelance = Number(item.freelance_fee || 0);
-                    const bersih = harga - feeFreelance;
-
-                    return (
-                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-4 text-sm font-medium text-slate-600">{item.tanggal}</td>
-                        <td className="p-4">
-                          <p className="font-bold text-slate-900 text-base">{item.nama_klien}</p>
-                          <p className="text-xs text-slate-400 italic">{item.keterangan || '-'}</p>
-                        </td>
-                        <td className="p-4">
-                          <p className="text-sm font-semibold text-slate-800">{item.nama_fg || '-'}</p>
-                          <p className="text-xs text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</p>
-                        </td>
-                        <td className="p-4">
-                          <p className="font-black text-slate-950 text-base">
-                            Rp {harga.toLocaleString('id-ID')}
-                          </p>
-                          <p className="text-xs font-bold text-emerald-600">
-                            Bersih: Rp {bersih.toLocaleString('id-ID')}
-                          </p>
-                        </td>
-                        <td className="p-4 text-center">
-                          <button
-                            onClick={() => toggleFreelancePaid(item.booking_id, item.is_freelance_paid)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5 ${
-                              item.is_freelance_paid 
-                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
-                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                            }`}
-                          >
-                            {item.is_freelance_paid ? '✓ Sudah Dibayar' : '○ Belum Dibayar'}
-                          </button>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className={`px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest ${
-                            item.payment_status === 'LUNAS' 
-                              ? 'bg-green-500 text-white shadow-sm' 
-                              : 'bg-red-500 text-white shadow-sm'
-                          }`}>
-                            {item.payment_status || 'DP'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest ${
+                          item.payment_status === 'LUNAS' ? 'bg-green-500 text-white shadow-sm' : 'bg-red-500 text-white shadow-sm'
+                        }`}>
+                          {item.payment_status || 'DP'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p className="p-10 text-center text-slate-400">Tidak ada data untuk bulan ini.</p>
         )}
