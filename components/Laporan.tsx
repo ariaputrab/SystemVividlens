@@ -8,26 +8,29 @@ export default function Laporan() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: jadwalData } = await supabase.from('jadwal').select('*');
-      const { data: bookingData } = await supabase.from('Booking').select('id, total_price, freelance_fee, nama_fg');
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: jadwalData } = await supabase.from('jadwal').select('*');
+    const { data: bookingData } = await supabase.from('Booking').select('id, total_price, freelance_fee, nama_fg, is_freelance_paid');
 
-      if (jadwalData && bookingData) {
-        const combined = jadwalData.map(j => {
-          const booking = bookingData.find(b => b.id === j.booking_id);
-          return { 
-            ...j, 
-            total_price: booking?.total_price || 0,
-            freelance_fee: booking?.freelance_fee || 0,
-            nama_fg: booking?.nama_fg || j.nama_fg || '-'
-          };
-        });
-        setData(combined);
-      }
-      setLoading(false);
-    };
+    if (jadwalData && bookingData) {
+      const combined = jadwalData.map(j => {
+        const booking = bookingData.find(b => b.id === j.booking_id);
+        return { 
+          ...j, 
+          booking_id: booking?.id || j.booking_id,
+          total_price: booking?.total_price || 0,
+          freelance_fee: booking?.freelance_fee || 0,
+          nama_fg: booking?.nama_fg || j.nama_fg || '-',
+          is_freelance_paid: booking?.is_freelance_paid || false
+        };
+      });
+      setData(combined);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -44,6 +47,24 @@ export default function Laporan() {
 
     setFilteredData(sorted);
   }, [data, selectedMonth]);
+
+  // Fungsi untuk mengubah status centang bayar freelance
+  const toggleFreelancePaid = async (bookingId: string, currentStatus: boolean) => {
+    if (!bookingId) return;
+    const newStatus = !currentStatus;
+
+    const { error } = await supabase
+      .from('Booking')
+      .update({ is_freelance_paid: newStatus })
+      .eq('id', bookingId);
+
+    if (error) {
+      alert("Gagal memperbarui status: " + error.message);
+      return;
+    }
+
+    setData(prev => prev.map(item => item.booking_id === bookingId ? { ...item, is_freelance_paid: newStatus } : item));
+  };
 
   const totalOmzet = filteredData.reduce((sum, item) => sum + (Number(item.total_price || 0)), 0);
   const totalFreelance = filteredData.reduce((sum, item) => sum + (Number(item.freelance_fee || 0)), 0);
@@ -95,7 +116,7 @@ export default function Laporan() {
         </div>
       </div>
 
-      {/* Tampilan List Data: Berubah jadi Card di HP, Tabel di Desktop */}
+      {/* Tampilan List Data */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         {filteredData.length > 0 ? (
           <>
@@ -126,6 +147,17 @@ export default function Laporan() {
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Fotografer</span>
                         <span className="font-semibold text-slate-800">{item.nama_fg || '-'}</span>
                         <span className="block text-rose-600 font-medium">Bayar: Rp {feeFreelance.toLocaleString('id-ID')}</span>
+                        
+                        <button
+                          onClick={() => toggleFreelancePaid(item.booking_id, item.is_freelance_paid)}
+                          className={`mt-2 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm ${
+                            item.is_freelance_paid 
+                              ? 'bg-emerald-100 text-emerald-700' 
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {item.is_freelance_paid ? '✓ Fee Dibayar' : '○ Belum Dibayar'}
+                        </button>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Keuangan</span>
@@ -145,9 +177,10 @@ export default function Laporan() {
                   <tr>
                     <th className="p-4">Tanggal</th>
                     <th className="p-4">Nama Klien</th>
-                    <th className="p-4">Info FG & Freelance</th>
+                    <th className="p-4">Info FG & Fee Freelance</th>
                     <th className="p-4">Harga / Bersih</th>
-                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Status Bayar FG</th>
+                    <th className="p-4 text-center">Status Klien</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -174,6 +207,18 @@ export default function Laporan() {
                           <p className="text-xs font-bold text-emerald-600">
                             Bersih: Rp {bersih.toLocaleString('id-ID')}
                           </p>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button
+                            onClick={() => toggleFreelancePaid(item.booking_id, item.is_freelance_paid)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm inline-flex items-center gap-1.5 ${
+                              item.is_freelance_paid 
+                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' 
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {item.is_freelance_paid ? '✓ Sudah Dibayar' : '○ Belum Dibayar'}
+                          </button>
                         </td>
                         <td className="p-4 text-center">
                           <span className={`px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest ${
