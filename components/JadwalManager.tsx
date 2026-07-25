@@ -355,7 +355,7 @@ export default function JadwalManager() {
         />
       )}
 
-      {/* Detail Modal dengan Tabs */}
+      {/* Detail Modal dengan Tabs & Tombol Reschedule */}
       {detailModalConfig.isOpen && detailModalConfig.item && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -367,7 +367,7 @@ export default function JadwalManager() {
               <button onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
             </div>
 
-            <div className="border-b border-slate-100 px-6">
+            <div className="border-b border-slate-100 px-6 flex justify-between items-center">
               <div className="flex gap-6">
                 <button
                   onClick={() => setDetailModalConfig({ ...detailModalConfig, activeTab: 'details' })}
@@ -398,6 +398,29 @@ export default function JadwalManager() {
                   }`}
                 >
                   Chat
+                </button>
+              </div>
+
+              {/* Tombol Reschedule & Indikator Kalender */}
+              <div className="flex items-center gap-3">
+                {detailModalConfig.item.is_done && (
+                  <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-md text-xs font-semibold">
+                    ✓ Di Kalender
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    const bookingToReschedule = bookings.find(b => b.id === detailModalConfig.item.booking_id);
+                    if (bookingToReschedule) {
+                      setSelectedBooking({ ...bookingToReschedule, jadwalId: detailModalConfig.item.id });
+                      setDetailModalConfig({ ...detailModalConfig, isOpen: false });
+                    } else {
+                      setAlertModal({ isOpen: true, message: "Data booking tidak ditemukan untuk reschedule." });
+                    }
+                  }}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-3 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5"
+                >
+                  📅 Reschedule
                 </button>
               </div>
             </div>
