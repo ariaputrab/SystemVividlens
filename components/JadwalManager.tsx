@@ -215,6 +215,10 @@ export default function JadwalManager() {
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
+  // Dapatkan data item terkini langsung dari state utama "jadwal" agar tombol modal selalu reaktif
+  const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
+  const isCurrentScheduleEmpty = !currentModalItem?.tanggal;
+
   return (
     <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm w-full text-slate-800">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
@@ -369,12 +373,12 @@ export default function JadwalManager() {
         />
       )}
 
-      {detailModalConfig.isOpen && detailModalConfig.item && (
+      {detailModalConfig.isOpen && currentModalItem && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">{detailModalConfig.item.nama_klien}</h2>
+                <h2 className="text-xl font-semibold text-slate-900">{currentModalItem.nama_klien}</h2>
                 <p className="text-xs text-slate-500 mt-1">Detail Jadwal & Booking</p>
               </div>
               <button onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
@@ -421,11 +425,11 @@ export default function JadwalManager() {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Kampus</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.kampus || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.kampus || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Lokasi</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.lokasi || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.lokasi || '-'}</p>
                     </div>
                   </div>
 
@@ -433,7 +437,7 @@ export default function JadwalManager() {
 
                   <div>
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Paket</p>
-                    <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.paket || '-'}</p>
+                    <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.paket || '-'}</p>
                   </div>
 
                   <div className="h-px bg-slate-100"></div>
@@ -441,15 +445,15 @@ export default function JadwalManager() {
                   <div className="grid grid-cols-3 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">MUA</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.mua || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.mua || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Dress</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.dress || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.dress || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">IG/TikTok</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.instagram_tiktok || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.instagram_tiktok || '-'}</p>
                     </div>
                   </div>
 
@@ -458,11 +462,11 @@ export default function JadwalManager() {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">WhatsApp</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail.whatsapp || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.whatsapp || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">FG</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.item.nama_fg || '-'}</p>
+                      <p className="text-sm text-slate-900 font-medium mt-2">{currentModalItem.nama_fg || '-'}</p>
                     </div>
                   </div>
 
@@ -518,11 +522,11 @@ export default function JadwalManager() {
                   <div className="grid grid-cols-2 gap-6">
                     <div className="border border-slate-200 rounded-lg p-4">
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">DP</p>
-                      <p className="text-lg font-semibold text-slate-900 mt-3">Rp {(detailModalConfig.detail.dp_amount || 0).toLocaleString()}</p>
+                      <p className="text-lg font-semibold text-slate-900 mt-3">Rp {(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}</p>
                     </div>
                     <div className="border border-slate-200 rounded-lg p-4">
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Sisa</p>
-                      <p className="text-lg font-semibold text-slate-900 mt-3">Rp {(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}</p>
+                      <p className="text-lg font-semibold text-slate-900 mt-3">Rp {(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -536,7 +540,7 @@ export default function JadwalManager() {
                       }`}>
                         {detailModalConfig.detail?.status || 'DP'}
                       </span>
-                      {detailModalConfig.item.is_done && (
+                      {currentModalItem.is_done && (
                         <span className="px-3 py-1.5 rounded text-xs font-medium bg-slate-200 text-slate-700">Selesai</span>
                       )}
                     </div>
@@ -545,7 +549,7 @@ export default function JadwalManager() {
                   <div className="space-y-3">
                     <button
                       onClick={() => {
-                        updateStatus(detailModalConfig.item.id, 'payment_status', 'DP');
+                        updateStatus(currentModalItem.id, 'payment_status', 'DP');
                       }}
                       className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
                     >
@@ -553,7 +557,7 @@ export default function JadwalManager() {
                     </button>
                     <button
                       onClick={() => {
-                        updateStatus(detailModalConfig.item.id, 'payment_status', 'LUNAS');
+                        updateStatus(currentModalItem.id, 'payment_status', 'LUNAS');
                       }}
                       className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
                     >
@@ -566,33 +570,33 @@ export default function JadwalManager() {
               {detailModalConfig.activeTab === 'chat' && (
                 <div className="space-y-4">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-xs text-slate-600 max-h-96 overflow-y-auto font-mono">
-                    {`Halo Kak ${detailModalConfig.item.nama_klien} 😊
+                    {`Halo Kak ${currentModalItem.nama_klien} 😊
 Mengingatkan untuk jadwal photoshoot ya 📸✨
 
-🗓 Tanggal : ${detailModalConfig.item.tanggal ? new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID') : 'Belum diset'}
-⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5) || 'Belum diset'}
-📍 Lokasi : ${detailModalConfig.detail.lokasi || '-'}
-🏫 Kampus : ${detailModalConfig.detail.kampus || '-'}
-📌 Paket : ${detailModalConfig.detail.paket || '-'}
-📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}
+🗓 Tanggal : ${currentModalItem.tanggal ? new Date(currentModalItem.tanggal).toLocaleDateString('id-ID') : 'Belum diset'}
+⏰ Jam : ${currentModalItem.jam?.substring(0, 5) || 'Belum diset'}
+📍 Lokasi : ${detailModalConfig.detail?.lokasi || '-'}
+🏫 Kampus : ${detailModalConfig.detail?.kampus || '-'}
+📌 Paket : ${detailModalConfig.detail?.paket || '-'}
+📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}
 
 Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
-📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}
-📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}
+📌 DP : Rp ${(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}
+📌 Sisa pembayaran : Rp ${(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}
 
 💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
 
 Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
-📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
+📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${currentModalItem.nama_klien} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
 
 Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                   </div>
 
                   <button
                     onClick={() => {
-                      const tglStr = detailModalConfig.item.tanggal ? new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID') : 'Belum diset';
-                      const jamStr = detailModalConfig.item.jam?.substring(0, 5) || 'Belum diset';
-                      const chat = `Halo Kak ${detailModalConfig.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${tglStr}\n⏰ Jam : ${jamStr}\n📍 Lokasi : ${detailModalConfig.detail.lokasi}\n🏫 Kampus : ${detailModalConfig.detail.kampus}\n📌 Paket : ${detailModalConfig.detail.paket}\n📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
+                      const tglStr = currentModalItem.tanggal ? new Date(currentModalItem.tanggal).toLocaleDateString('id-ID') : 'Belum diset';
+                      const jamStr = currentModalItem.jam?.substring(0, 5) || 'Belum diset';
+                      const chat = `Halo Kak ${currentModalItem.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${tglStr}\n⏰ Jam : ${jamStr}\n📍 Lokasi : ${detailModalConfig.detail?.lokasi}\n🏫 Kampus : ${detailModalConfig.detail?.kampus}\n📌 Paket : ${detailModalConfig.detail?.paket}\n📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${currentModalItem.nama_klien} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
                       navigator.clipboard.writeText(chat);
                       setAlertModal({ isOpen: true, message: "Chat berhasil disalin!" });
                     }}
@@ -609,8 +613,8 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                 <div className="flex items-center gap-2">
                   <span>📅</span>
                   <span>
-                    {detailModalConfig.item.tanggal 
-                      ? `${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • ${detailModalConfig.item.jam?.substring(0, 5) || '-'}` 
+                    {currentModalItem.tanggal 
+                      ? `${new Date(currentModalItem.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • ${currentModalItem.jam?.substring(0, 5) || '-'}` 
                       : 'Jadwal belum diset'}
                   </span>
                 </div>
@@ -621,19 +625,19 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                   onClick={() => {
                     setDetailModalConfig({ isOpen: false, item: null, detail: null, activeTab: 'details' });
                     setSelectedBooking({
-                      id: detailModalConfig.detail.id,
-                      booking_id: detailModalConfig.item.booking_id,
-                      tanggal_foto: detailModalConfig.item.tanggal,
-                      jam_foto: detailModalConfig.item.jam
+                      id: detailModalConfig.detail?.id,
+                      booking_id: currentModalItem.booking_id,
+                      tanggal_foto: currentModalItem.tanggal,
+                      jam_foto: currentModalItem.jam
                     });
                   }}
                   className={`flex-1 text-white font-medium py-2.5 rounded-lg transition text-sm ${
-                    detailModalConfig.item.tanggal 
+                    !isCurrentScheduleEmpty 
                       ? 'bg-amber-600 hover:bg-amber-700' 
                       : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                 >
-                  {detailModalConfig.item.tanggal ? 'Reschedule' : 'Set Jadwal'}
+                  {!isCurrentScheduleEmpty ? 'Reschedule' : 'Set Jadwal'}
                 </button>
                 <button
                   onClick={() => setDetailModalConfig({ isOpen: false, item: null, detail: null, activeTab: 'details' })}
