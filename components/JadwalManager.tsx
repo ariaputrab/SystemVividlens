@@ -282,7 +282,7 @@ export default function JadwalManager() {
                     <div className="flex items-center gap-1.5">
                       {isFgEmpty && (
                         <span className="absolute -top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 animate-pulse uppercase tracking-wider shadow-sm z-10">
-                          ⚠️ Belum Ada FG
+                          \u26A0\uFE0F Belum Ada FG
                         </span>
                       )}
                       <input 
@@ -429,7 +429,7 @@ export default function JadwalManager() {
               <div className="flex items-center gap-3">
                 {detailModalConfig.item.is_done ? (
                   <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-md text-xs font-semibold">
-                    ✅ Di Kalender
+                    \u2705 Di Kalender
                   </span>
                 ) : (
                   <button
@@ -639,7 +639,7 @@ export default function JadwalManager() {
                   "Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\n" +
                   "Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya\n" +
                   "Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak " + nama + " di nomor " + whatsapp + " sebelum sesi dimulai ya.\n\n" +
-                  "Terima kasih, sampai jumpa di hari H ✨";
+                  "Terima kasih, sampai jumpa di hari H \u2728";
 
                 return (
                   <div className="space-y-4">
@@ -671,7 +671,7 @@ export default function JadwalManager() {
                           "Pembayaran via QRIS (scan seperti saat DP ya Kak)%0A%0A" +
                           "Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya%0A" +
                           "Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak " + nama + " di nomor " + whatsapp + " sebelum sesi dimulai ya.%0A%0A" +
-                          "Terima kasih, sampai jumpa di hari H ✨";
+                          "Terima kasih, sampai jumpa di hari H \u2728";
 
                         window.open("https://wa.me/" + phone + "?text=" + text, "_blank");
                       }}
