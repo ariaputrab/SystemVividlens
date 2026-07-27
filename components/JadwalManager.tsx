@@ -117,7 +117,6 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // Update is_synced to true in database
         await supabase.from('jadwal').update({ is_synced: true }).eq('id', item.id);
         await fetchAllData();
 
@@ -214,7 +213,7 @@ export default function JadwalManager() {
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   const generateChatText = (item: any, detail: any) => {
-    return `Halo Kak ${item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\n⏰ Jam : ${item.jam?.substring(0, 5)}\n📍 Lokasi : ${detail.lokasi || '-'}\n🏫 Kampus : ${detail.kampus || '-'}\n📌 Paket : ${detail.paket || '-'}\n📞 WhatsApp : ${detail.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detail.dp_amount || 0).toLocaleString('id-ID')}\n📌 Sisa pembayaran : Rp ${(detail.remaining_balance || 0).toLocaleString('id-ID')}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${item.nama_klien} di nomor ${detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
+    return `Halo Kak ${item.nama_klien}\nMengingatkan untuk jadwal photoshoot ya\n\nTanggal : ${new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\nJam : ${item.jam?.substring(0, 5)}\nLokasi : ${detail.lokasi || '-'}\nKampus : ${detail.kampus || '-'}\nPaket : ${detail.paket || '-'}\nWhatsApp : ${detail.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak\nDP : Rp ${(detail.dp_amount || 0).toLocaleString('id-ID')}\nSisa pembayaran : Rp ${(detail.remaining_balance || 0).toLocaleString('id-ID')}\n\nPembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya\nNanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${item.nama_klien} di nomor ${detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H`;
   };
 
   return (
@@ -324,12 +323,15 @@ export default function JadwalManager() {
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        Terset
+                        Schedule sudah diset kalender
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-xs font-medium px-2.5 py-1 rounded-full">
-                        Belum
-                      </span>
+                      <button
+                        onClick={() => syncToGoogle(item, detail)}
+                        className="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full transition"
+                      >
+                        Set ke Kalender
+                      </button>
                     )}
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3">
@@ -595,13 +597,6 @@ export default function JadwalManager() {
             </div>
 
             <div className="border-t border-slate-200 px-6 py-4 space-y-3">
-              <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 mb-4">
-                <div className="flex items-center gap-2">
-                  <span>📅</span>
-                  <span>{new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {detailModalConfig.item.jam?.substring(0, 5)}</span>
-                </div>
-              </div>
-              
               <div className="flex gap-3">
                 <button
                   onClick={() => {
