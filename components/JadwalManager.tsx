@@ -45,6 +45,27 @@ export default function JadwalManager() {
     }
   };
 
+  const updateJadwalField = async (jadwalId: string, field: string, value: any) => {
+    const payload = { [field]: value === '' ? null : value };
+    const { error } = await supabase.from('jadwal').update(payload).eq('id', jadwalId);
+
+    if (error) {
+      setAlertModal({ isOpen: true, message: `Gagal menyimpan jadwal: ${error.message}` });
+      return;
+    }
+
+    setJadwal((prev) => prev.map(j => j.id === jadwalId ? { ...j, [field]: payload[field] } : j));
+
+    if (detailModalConfig.item?.id === jadwalId) {
+      setDetailModalConfig((prev: any) => ({
+        ...prev,
+        item: { ...prev.item, [field]: payload[field] }
+      }));
+    }
+
+    setAlertModal({ isOpen: true, message: "Jadwal berhasil diperbarui!" });
+  };
+
   const updateFreelanceFee = async (bookingId: string | undefined, rawValue: string) => {
     await updateBookingField(bookingId, 'freelance_fee', rawValue === '' ? null : Number(rawValue));
   };
@@ -180,7 +201,7 @@ export default function JadwalManager() {
       const detail = bookings.find(b => b.id === item.booking_id) || {};
       return {
         Klien: item.nama_klien,
-        FG: item.nama_fg || '-',
+        FG: item.nama_fg || 'BELUM DISSET',
         Tanggal: item.tanggal,
         Jam: item.jam?.substring(0, 5),
         Kampus: detail.kampus || '-',
@@ -252,15 +273,30 @@ export default function JadwalManager() {
           <tbody>
             {filteredJadwal.map((item) => {
               const detail = bookings.find(b => b.id === item.booking_id) || {};
+              const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "";
+
               return (
                 <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition ${item.is_done ? 'bg-green-50/30' : ''}`}>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 font-semibold text-slate-900 cursor-pointer hover:text-indigo-600" onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })}>{item.nama_klien}</td>
-                  <td className="px-3 py-2 sm:px-4 sm:py-3">
-                    <input type="text" value={item.nama_fg || ''}
-                      onChange={(e) => { const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); setJadwal(updatedJadwal); }}
-                      onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
-                      className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs w-24 focus:ring-1 focus:ring-indigo-500 outline-none"
-                    />
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 relative">
+                    <div className="flex items-center gap-1.5">
+                      <input 
+                        type="text" 
+                        value={item.nama_fg || ''}
+                        placeholder="Belum diset"
+                        onChange={(e) => { const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); setJadwal(updatedJadwal); }}
+                        onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
+                        className={`border rounded-lg px-2 py-1 text-xs w-28 focus:ring-1 focus:ring-indigo-500 outline-none ${
+                          isFgEmpty ? 'bg-amber-50 border-amber-300 text-amber-900 placeholder-amber-400 font-semibold' : 'bg-slate-50 border-slate-200'
+                        }`}
+                      />
+                      {isFgEmpty && (
+                        <span className="flex h-2 w-2 relative" title="FG Belum Diset!">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm font-medium text-slate-900">
                     <div className="flex items-center gap-2">
@@ -377,20 +413,51 @@ export default function JadwalManager() {
             <div className="p-6">
               {detailModalConfig.activeTab === 'details' && (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Tanggal</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">
-                        {new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </p>
+                  {/* Bagian Edit Tanggal & Jam Langsung di Modal */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                    <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Ubah Jadwal Sesi (Tanggal & Jam)</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs text-slate-500 block mb-1">Tanggal Foto</label>
+                        <input
+                          type="date"
+                          value={detailModalConfig.item.tanggal ? detailModalConfig.item.tanggal.split('T')[0] : ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDetailModalConfig((prev: any) => ({
+                              ...prev,
+                              item: { ...prev.item, tanggal: val }
+                            }));
+                          }}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 block mb-1">Jam Foto</label>
+                        <input
+                          type="time"
+                          value={detailModalConfig.item.jam?.substring(0, 5) || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDetailModalConfig((prev: any) => ({
+                              ...prev,
+                              item: { ...prev.item, jam: val }
+                            }));
+                          }}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Jam</p>
-                      <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.item.jam?.substring(0, 5)}</p>
-                    </div>
+                    <button
+                      onClick={() => {
+                        updateJadwalField(detailModalConfig.item.id, 'tanggal', detailModalConfig.item.tanggal);
+                        updateJadwalField(detailModalConfig.item.id, 'jam', detailModalConfig.item.jam);
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-xs transition w-full sm:w-auto"
+                    >
+                      Simpan Perubahan Jadwal
+                    </button>
                   </div>
-
-                  <div className="h-px bg-slate-100"></div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div>
