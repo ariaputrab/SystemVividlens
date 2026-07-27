@@ -624,23 +624,36 @@ export default function JadwalManager() {
               {detailModalConfig.activeTab === 'chat' && (() => {
                 const { nama, tanggal, jam, lokasi, kampus, paket, whatsapp, dpAmount, remainingBalance } = getWaMessageVariables();
                 
-                // Rakit teks preview menggunakan string concatenation murni untuk menghindari masalah escape karakter template literal Next.js
+                const eSmile = String.fromCodePoint(0x1F60A);
+                const eCam = String.fromCodePoint(0x1F4F8);
+                const eSparkles = String.fromCodePoint(0x2728);
+                const eCal = String.fromCodePoint(0x1F4C5);
+                const eClock = String.fromCodePoint(0x23F0);
+                const ePin = String.fromCodePoint(0x1F4CC);
+                const eLoc = String.fromCodePoint(0x1F4CD);
+                const eSchool = String.fromCodePoint(0x1F3EB);
+                const ePhone = String.fromCodePoint(0x1F4DE);
+                const ePray = String.fromCodePoint(0x1F64F);
+                const eCard = String.fromCodePoint(0x1F4B3);
+                const eMail = String.fromCodePoint(0x1F4E9);
+                const eGrad = String.fromCodePoint(0x1F393);
+
                 const rawPreviewText = 
-                  "Halo Kak " + nama + " 😊\n" +
-                  "Mengingatkan untuk jadwal photoshoot ya 📸✨\n\n" +
-                  "🗓 Tanggal : " + tanggal + "\n" +
-                  "⏰ Jam : " + jam + "\n" +
-                  "📍 Lokasi : " + lokasi + "\n" +
-                  "🏫 Kampus : " + kampus + "\n" +
-                  "📌 Paket : " + paket + "\n" +
-                  "📞 WhatsApp : " + whatsapp + "\n\n" +
-                  "Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n" +
-                  "📌 DP : Rp " + dpAmount + "\n" +
-                  "📌 Sisa pembayaran : Rp " + remainingBalance + "\n\n" +
-                  "💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\n" +
-                  "Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n" +
-                  "📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak " + nama + " di nomor " + whatsapp + " sebelum sesi dimulai ya.\n\n" +
-                  "Terima kasih, sampai jumpa di hari H ✨📸🎓";
+                  "Halo Kak " + nama + " " + eSmile + "\n" +
+                  "Mengingatkan untuk jadwal photoshoot ya " + eCam + eSparkles + "\n\n" +
+                  eCal + " Tanggal : " + tanggal + "\n" +
+                  eClock + " Jam : " + jam + "\n" +
+                  eLoc + " Lokasi : " + lokasi + "\n" +
+                  eSchool + " Kampus : " + kampus + "\n" +
+                  ePin + " Paket : " + paket + "\n" +
+                  ePhone + " WhatsApp : " + whatsapp + "\n\n" +
+                  "Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak " + ePray + "\n" +
+                  ePin + " DP : Rp " + dpAmount + "\n" +
+                  ePin + " Sisa pembayaran : Rp " + remainingBalance + "\n\n" +
+                  eCard + " Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\n" +
+                  "Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya " + eSmile + "\n" +
+                  eMail + " Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak " + nama + " di nomor " + whatsapp + " sebelum sesi dimulai ya.\n\n" +
+                  "Terima kasih, sampai jumpa di hari H " + eSparkles + eCam + eGrad;
 
                 return (
                   <div className="space-y-4">
@@ -658,21 +671,21 @@ export default function JadwalManager() {
                         }
 
                         const text = 
-                          "Halo Kak " + nama + " 😊%0A" +
-                          "Mengingatkan untuk jadwal photoshoot ya 📸✨%0A%0A" +
-                          "🗓 Tanggal : " + tanggal + "%0A" +
-                          "⏰ Jam : " + jam + "%0A" +
-                          "📍 Lokasi : " + lokasi + "%0A" +
-                          "🏫 Kampus : " + kampus + "%0A" +
-                          "📌 Paket : " + paket + "%0A" +
-                          "📞 WhatsApp : " + whatsapp + "%0A%0A" +
-                          "Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏%0A" +
-                          "📌 DP : Rp " + dpAmount + "%0A" +
-                          "📌 Sisa pembayaran : Rp " + remainingBalance + "%0A%0A" +
-                          "💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)%0A%0A" +
-                          "Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊%0A" +
-                          "📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak " + nama + " di nomor " + whatsapp + " sebelum sesi dimulai ya.%0A%0A" +
-                          "Terima kasih, sampai jumpa di hari H ✨📸🎓";
+                          "Halo Kak " + nama + " " + eSmile + "%0A" +
+                          "Mengingatkan untuk jadwal photoshoot ya " + eCam + eSparkles + "%0A%0A" +
+                          eCal + " Tanggal : " + tanggal + "%0A" +
+                          eClock + " Jam : " + jam + "%0A" +
+                          eLoc + " Lokasi : " + lokasi + "%0A" +
+                          eSchool + " Kampus : " + kampus + "%0A" +
+                          ePin + " Paket : " + paket + "%0A" +
+                          ePhone + " WhatsApp : " + whatsapp + "%0A%0A" +
+                          "Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak " + ePray + "%0A" +
+                          ePin + " DP : Rp " + dpAmount + "%0A" +
+                          ePin + " Sisa pembayaran : Rp " + remainingBalance + "%0A%0A" +
+                          eCard + " Pembayaran via QRIS (scan seperti saat DP ya Kak)%0A%0A" +
+                          "Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya " + eSmile + "%0A" +
+                          eMail + " Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak " + nama + " di nomor " + whatsapp + " sebelum sesi dimulai ya.%0A%0A" +
+                          "Terima kasih, sampai jumpa di hari H " + eSparkles + eCam + eGrad;
 
                         window.open("https://wa.me/" + phone + "?text=" + text, "_blank");
                       }}
