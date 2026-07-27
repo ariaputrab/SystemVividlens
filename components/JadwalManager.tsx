@@ -181,8 +181,8 @@ export default function JadwalManager() {
       return {
         Klien: item.nama_klien,
         FG: item.nama_fg || 'BELUM DISET',
-        Tanggal: item.tanggal,
-        Jam: item.jam?.substring(0, 5),
+        Tanggal: item.tanggal || 'BELUM DISET',
+        Jam: item.jam?.substring(0, 5) || '-',
         Kampus: detail.kampus || '-',
         Lokasi: detail.lokasi || '-',
         Paket: detail.paket || '-',
@@ -202,9 +202,16 @@ export default function JadwalManager() {
   };
 
   const filteredJadwal = jadwal
-    .filter(item => item.tanggal && new Date(item.tanggal).getMonth() + 1 === selectedMonth)
+    .filter(item => {
+      if (!item.tanggal) return true; // Tampilkan juga yang belum diset jadwalnya agar bisa di-set
+      return new Date(item.tanggal).getMonth() + 1 === selectedMonth;
+    })
     .filter(item => item.nama_klien?.toLowerCase().includes(searchKlien.toLowerCase()))
-    .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
+    .sort((a, b) => {
+      if (!a.tanggal) return 1;
+      if (!b.tanggal) return -1;
+      return new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime();
+    });
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
@@ -620,7 +627,11 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                       jam_foto: detailModalConfig.item.jam
                     });
                   }}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2.5 rounded-lg transition text-sm"
+                  className={`flex-1 text-white font-medium py-2.5 rounded-lg transition text-sm ${
+                    detailModalConfig.item.tanggal 
+                      ? 'bg-amber-600 hover:bg-amber-700' 
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
                 >
                   {detailModalConfig.item.tanggal ? 'Reschedule' : 'Set Jadwal'}
                 </button>
