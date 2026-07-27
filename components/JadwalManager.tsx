@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
+import Modal from '../components/Modal';
 import RescheduleModal from '../components/RescheduleModal';
 
 export default function JadwalManager() {
@@ -58,27 +59,18 @@ export default function JadwalManager() {
 
   useEffect(() => { fetchAllData(); }, []);
 
+  // Refresh detail modal data whenever it opens to ensure latest booking status
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
-        const { data: latestJadwalItem } = await supabase
-          .from('jadwal')
-          .select('*')
-          .eq('id', detailModalConfig.item.id)
-          .single();
-
         const { data: latestBooking } = await supabase
           .from('Booking')
           .select('*')
           .eq('id', detailModalConfig.item.booking_id)
           .single();
         
-        if (latestJadwalItem || latestBooking) {
-          setDetailModalConfig((prev: any) => ({
-            ...prev,
-            item: latestJadwalItem || prev.item,
-            detail: latestBooking || prev.detail
-          }));
+        if (latestBooking) {
+          setDetailModalConfig((prev: any) => ({ ...prev, detail: latestBooking }));
         }
       };
       refreshDetailData();
@@ -126,28 +118,23 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        await supabase.from('jadwal').update({ is_synced: true }).eq('id', item.id);
-        await fetchAllData();
-
-        const { data: updatedJadwalItem } = await supabase.from('jadwal').select('*').eq('id', item.id).single();
-        if (updatedJadwalItem && detailModalConfig.isOpen) {
-          setDetailModalConfig((prev: any) => ({ ...prev, item: updatedJadwalItem }));
-        }
-
-        setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
+        setAlertModal({ isOpen: true, message: `Status berhasil diubah ke 'Done' dan jadwal tersinkronisasi dengan durasi ${durasiMenit} menit!` });
       } else {
-        setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
+        setAlertModal({ isOpen: true, message: "Status berhasil disimpan di database, namun Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
       }
     } catch (err) {
-      setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
+      setAlertModal({ isOpen: true, message: "Status tersimpan, namun Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
     }
   };
 
   const updateStatus = async (id: string, field: string, value: any) => {
     const item = jadwal.find(j => j.id === id);
+    
+    // Update jadwal table
     const { error: jadwalError } = await supabase.from('jadwal').update({ [field]: value }).eq('id', id);
 
     if (!jadwalError) {
+      // If payment_status changed in jadwal, also update status in Booking table
       if (field === 'payment_status' && item?.booking_id) {
         await supabase.from('Booking').update({ status: value }).eq('id', item.booking_id);
       }
@@ -158,8 +145,21 @@ export default function JadwalManager() {
         }
       }
 
+      if (field === 'is_done' && value === true) {
+        if (status === "loading") {
+          setAlertModal({ isOpen: true, message: "Memuat sesi, silakan tunggu sebentar..." });
+          return;
+        }
+
+        const detail = bookings.find(b => b.id === item?.booking_id);
+        if (item && detail) {
+          await syncToGoogle(item, detail);
+        }
+      }
+
       await fetchAllData();
       
+      // After fetchAllData, refetch latest data to ensure modal gets newest state
       setTimeout(async () => {
         const { data: latestJadwal } = await supabase.from('jadwal').select('*');
         const { data: latestBookings } = await supabase.from('Booking').select('*');
@@ -196,8 +196,7 @@ export default function JadwalManager() {
         DP: detail.dp_amount || 0,
         Sisa: detail.remaining_balance || 0,
         Status_Bayar: item.payment_status || 'DP',
-        Selesai: item.is_done ? 'Ya' : 'Tidak',
-        Synced_Calendar: item.is_synced ? 'Sudah' : 'Belum'
+        Selesai: item.is_done ? 'Ya' : 'Tidak'
       };
     });
     const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -212,10 +211,6 @@ export default function JadwalManager() {
     .sort((a, b) => new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime());
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-  const generateChatText = (item: any, detail: any) => {
-    return `Halo Kak ${item.nama_klien}\nMengingatkan untuk jadwal photoshoot ya\n\nTanggal : ${new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}\nJam : ${item.jam?.substring(0, 5)}\nLokasi : ${detail.lokasi || '-'}\nKampus : ${detail.kampus || '-'}\nPaket : ${detail.paket || '-'}\nWhatsApp : ${detail.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak\nDP : Rp ${(detail.dp_amount || 0).toLocaleString('id-ID')}\nSisa pembayaran : Rp ${(detail.remaining_balance || 0).toLocaleString('id-ID')}\n\nPembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya\nNanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${item.nama_klien} di nomor ${detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H`;
-  };
 
   return (
     <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm w-full text-slate-800">
@@ -337,10 +332,12 @@ export default function JadwalManager() {
         />
       )}
 
+      {/* Detail Modal dengan Tabs - Minimalist Design */}
       {detailModalConfig.isOpen && detailModalConfig.item && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start z-10">
+            {/* Header - Minimalist */}
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">{detailModalConfig.item.nama_klien}</h2>
                 <p className="text-xs text-slate-500 mt-1">Detail Jadwal & Booking</p>
@@ -348,6 +345,7 @@ export default function JadwalManager() {
               <button onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
             </div>
 
+            {/* Tabs - Minimalist */}
             <div className="border-b border-slate-100 px-6">
               <div className="flex gap-6">
                 <button
@@ -383,37 +381,10 @@ export default function JadwalManager() {
               </div>
             </div>
 
+            {/* Tab Content - Minimalist */}
             <div className="p-6">
               {detailModalConfig.activeTab === 'details' && (
                 <div className="space-y-5">
-                  {/* Bagian Status Google Calendar di dalam Modal Detail */}
-                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Status Google Calendar</p>
-                      <p className="text-sm font-semibold mt-1">
-                        {detailModalConfig.item?.is_synced ? (
-                          <span className="text-green-700 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                            Sudah diset ke Kalender
-                          </span>
-                        ) : (
-                          <span className="text-amber-600 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
-                            Belum diset ke Kalender
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    {!detailModalConfig.item?.is_synced && (
-                      <button
-                        onClick={() => syncToGoogle(detailModalConfig.item, detailModalConfig.detail)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition shadow-sm"
-                      >
-                        Set ke Kalender
-                      </button>
-                    )}
-                  </div>
-
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Tanggal</p>
@@ -577,37 +548,51 @@ export default function JadwalManager() {
               {detailModalConfig.activeTab === 'chat' && (
                 <div className="space-y-4">
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-xs text-slate-600 max-h-96 overflow-y-auto font-mono">
-                    {generateChatText(detailModalConfig.item, detailModalConfig.detail)}
+                    {`Halo Kak ${detailModalConfig.item.nama_klien} 😊
+Mengingatkan untuk jadwal photoshoot ya 📸✨
+
+🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID')}
+⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}
+📍 Lokasi : ${detailModalConfig.detail.lokasi || '-'}
+🏫 Kampus : ${detailModalConfig.detail.kampus || '-'}
+📌 Paket : ${detailModalConfig.detail.paket || '-'}
+📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}
+
+Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
+📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}
+📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}
+
+💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
+
+Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
+📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
+
+Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const chatText = generateChatText(detailModalConfig.item, detailModalConfig.detail);
-                        navigator.clipboard.writeText(chatText);
-                        setAlertModal({ isOpen: true, message: "Chat berhasil disalin!" });
-                      }}
-                      className="flex-1 bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
-                    >
-                      Copy Chat
-                    </button>
-                    
-                    {detailModalConfig.detail.whatsapp && (
-                      <a
-                        href={`https://wa.me/${detailModalConfig.detail.whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(generateChatText(detailModalConfig.item, detailModalConfig.detail))}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition text-sm text-center flex items-center justify-center gap-1.5"
-                      >
-                        Kirim ke WhatsApp
-                      </a>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => {
+                      const chat = `Halo Kak ${detailModalConfig.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID')}\n⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}\n📍 Lokasi : ${detailModalConfig.detail.lokasi}\n🏫 Kampus : ${detailModalConfig.detail.kampus}\n📌 Paket : ${detailModalConfig.detail.paket}\n📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
+                      navigator.clipboard.writeText(chat);
+                      setAlertModal({ isOpen: true, message: "Chat berhasil disalin!" });
+                    }}
+                    className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
+                  >
+                    Copy Chat
+                  </button>
                 </div>
               )}
             </div>
 
+            {/* Action Buttons - Minimalist */}
             <div className="border-t border-slate-200 px-6 py-4 space-y-3">
+              <div className="grid grid-cols-1 gap-2 text-xs text-slate-500 mb-4">
+                <div className="flex items-center gap-2">
+                  <span>📅</span>
+                  <span>{new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {detailModalConfig.item.jam?.substring(0, 5)}</span>
+                </div>
+              </div>
+              
               <div className="flex gap-3">
                 <button
                   onClick={() => {
@@ -617,12 +602,49 @@ export default function JadwalManager() {
                       booking_id: detailModalConfig.item.booking_id,
                       tanggal_foto: detailModalConfig.item.tanggal,
                       jam_foto: detailModalConfig.item.jam,
-                      jadwalId: detailModalConfig.item.id
+                      paket: detailModalConfig.detail.paket
                     });
                   }}
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium py-2.5 rounded-lg transition text-sm"
+                  className="flex-1 bg-slate-900 hover:bg-black text-white font-medium py-2 rounded text-sm transition flex items-center justify-center gap-2"
                 >
-                  Reschedule Jadwal
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Ubah Jadwal
+                </button>
+                <button
+                  onClick={() => {
+                    updateStatus(detailModalConfig.item.id, 'is_done', true);
+                    setDetailModalConfig({ ...detailModalConfig, isOpen: false });
+                  }}
+                  disabled={detailModalConfig.item.is_done}
+                  className={`flex-1 font-medium py-2 rounded text-sm transition flex items-center justify-center gap-2 ${
+                    detailModalConfig.item.is_done
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-900 hover:bg-black text-white'
+                  }`}
+                >
+                  {detailModalConfig.item.is_done ? (
+                    <>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      Selesai
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Selesaikan
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })}
+                  className="flex-1 border border-slate-300 hover:border-slate-400 text-slate-700 font-medium py-2 rounded text-sm transition"
+                >
+                  Batal
                 </button>
               </div>
             </div>
@@ -630,19 +652,50 @@ export default function JadwalManager() {
         </div>
       )}
 
-      {alertModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-center space-y-4">
-            <p className="text-sm text-slate-700 font-medium">{alertModal.message}</p>
-            <button
-              onClick={() => setAlertModal({ isOpen: false, message: '' })}
-              className="w-full bg-slate-900 hover:bg-black text-white py-2 rounded-lg text-sm font-medium transition"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={() => { setModalConfig({ ...modalConfig, isOpen: false }); fetchAllData(); }}
+        onConfirm={modalConfig.type === 'FG'
+          ? () => updateStatus(modalConfig.id, modalConfig.field, modalConfig.value)
+          : () => {
+            const wa = modalConfig.data?.detail.whatsapp || "Tidak tersedia";
+            const chat = `Halo Kak ${modalConfig.data?.item.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${modalConfig.data?.item.tanggal}\n⏰ Jam : ${modalConfig.data?.item.jam?.substring(0, 5)}\n📍 Lokasi : ${modalConfig.data?.detail.lokasi}\n🏫 Kampus : ${modalConfig.data?.detail.kampus}\n📌 Paket : ${modalConfig.data?.detail.paket}\n📞 WhatsApp : ${wa}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${modalConfig.data?.detail.dp_amount?.toLocaleString()}\n📌 Sisa pembayaran : Rp ${modalConfig.data?.detail.remaining_balance?.toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${modalConfig.data?.item.nama_klien} di nomor ${wa} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
+            navigator.clipboard.writeText(chat);
+            setAlertModal({ isOpen: true, message: "Format chat berhasil disalin!" });
+            setModalConfig({ ...modalConfig, isOpen: false });
+          }
+        }
+        title={modalConfig.type === 'FG' ? "Konfirmasi" : "Format Chat Pelunasan"}
+        message={modalConfig.type === 'FG' ? "Simpan perubahan Nama FG ini?" :
+          <span className="text-xs bg-slate-50 p-4 rounded-lg overflow-x-auto whitespace-pre-wrap block">{`Halo Kak ${modalConfig.data?.item.nama_klien} 😊
+           Mengingatkan untuk jadwal photoshoot ya 📸✨
+
+            🗓 Tanggal : ${modalConfig.data?.item.tanggal}
+            ⏰ Jam : ${modalConfig.data?.item.jam?.substring(0, 5)}
+            📍 Lokasi : ${modalConfig.data?.detail.lokasi}
+            🏫 Kampus : ${modalConfig.data?.detail.kampus}
+            📌 Paket : ${modalConfig.data?.detail.paket}
+            📞 WhatsApp : ${modalConfig.data?.detail.whatsapp || "Tidak tersedia"}
+            Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
+            📌 DP : Rp ${modalConfig.data?.detail.dp_amount?.toLocaleString()}
+            📌 Sisa pembayaran : Rp ${modalConfig.data?.detail.remaining_balance?.toLocaleString()}
+
+            💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
+
+            Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
+            📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${modalConfig.data?.item.nama_klien} di nomor ${modalConfig.data?.detail.whatsapp || "Tidak tersedia"} sebelum sesi dimulai ya.
+
+            Terima kasih, sampai jumpa di hari H ✨📸🎓`}</span>
+        }
+      />
+
+      <Modal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        onConfirm={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title="Informasi"
+        message={alertModal.message}
+      />
     </div>
   );
 }
