@@ -181,7 +181,7 @@ export default function JadwalManager() {
       return {
         Klien: item.nama_klien,
         FG: item.nama_fg || 'BELUM DISET',
-        Tanggal: item.tanggal || 'BELUM DISET',
+        Tanggal: item.tanggal ? item.tanggal : 'BELUM DISET',
         Jam: item.jam?.substring(0, 5) || '-',
         Kampus: detail.kampus || '-',
         Lokasi: detail.lokasi || '-',
@@ -203,7 +203,7 @@ export default function JadwalManager() {
 
   const filteredJadwal = jadwal
     .filter(item => {
-      if (!item.tanggal) return true; // Tampilkan juga yang belum diset jadwalnya agar bisa di-set
+      if (!item.tanggal) return true;
       return new Date(item.tanggal).getMonth() + 1 === selectedMonth;
     })
     .filter(item => item.nama_klien?.toLowerCase().includes(searchKlien.toLowerCase()))
