@@ -119,7 +119,6 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        // Simpan status sinkronisasi ke database agar permanen
         if (detail?.id) {
           await supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: result.eventId || 'synced' }).eq('id', detail.id);
           await fetchAllData();
@@ -215,7 +214,6 @@ export default function JadwalManager() {
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const isScheduleEmpty = !currentModalItem?.tanggal;
 
-  // Status kalender diambil dari database (field calendar_synced atau calendar_event_id)
   const isCalendarSynced = Boolean(detailModalConfig.detail?.calendar_synced || detailModalConfig.detail?.calendar_event_id);
 
   return (
@@ -280,12 +278,6 @@ export default function JadwalManager() {
                           isFgEmpty ? 'bg-amber-50 border-amber-300 text-amber-900 placeholder-amber-400 font-semibold' : 'bg-slate-50 border-slate-200'
                         }`}
                       />
-                      {isFgEmpty && (
-                        <span className="flex h-2 w-2 relative" title="FG Belum Diset!">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                        </span>
-                      )}
                     </div>
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm font-medium text-slate-900">
@@ -607,7 +599,6 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
               )}
             </div>
 
-            {/* Footer Modal: Tombol Kalender (Selalu Tampil) + Reschedule & Tutup */}
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
               <div className="w-full sm:w-auto">
                 {!isCalendarSynced ? (
@@ -623,7 +614,7 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                 ) : (
                   <div className="w-full sm:w-auto px-4 py-2 bg-green-100 text-green-700 font-medium rounded-lg border border-green-300 text-sm flex items-center justify-center gap-2 cursor-default select-none">
                     <span>✅</span>
-                    <span>Sudah Diset</span>
+                    <span>Done Set</span>
                   </div>
                 )}
               </div>
