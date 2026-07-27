@@ -12,10 +12,6 @@ export default function JadwalManager() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [searchKlien, setSearchKlien] = useState("");
 
-  const [modalConfig, setModalConfig] = useState<any>({
-    isOpen: false, type: 'FG', id: '', value: '', field: '', data: null
-  });
-
   const [detailModalConfig, setDetailModalConfig] = useState<any>({
     isOpen: false, item: null, detail: null, activeTab: 'details'
   });
@@ -174,8 +170,6 @@ export default function JadwalManager() {
           }
         }
       }, 100);
-      
-      setModalConfig({ ...modalConfig, isOpen: false });
     } else {
       setAlertModal({ isOpen: true, message: "Gagal menyimpan ke database: " + jadwalError.message });
     }
@@ -277,9 +271,26 @@ export default function JadwalManager() {
                           ⚠️ Belum Ada FG
                         </span>
                       )}
-                      <input type="text" value={item.nama_fg || ''}
-                        onChange={(e) => { const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); setJadwal(updatedJadwal); }}
-                        onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
+                      <input 
+                        type="text" 
+                        value={item.nama_fg || ''}
+                        onChange={(e) => { 
+                          const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); 
+                          setJadwal(updatedJadwal); 
+                        }}
+                        onBlur={async (e) => {
+                          const newValue = e.target.value;
+                          const { error } = await supabase
+                            .from('jadwal')
+                            .update({ nama_fg: newValue === '' ? null : newValue })
+                            .eq('id', item.id);
+
+                          if (error) {
+                            setAlertModal({ isOpen: true, message: "Gagal menyimpan nama FG: " + error.message });
+                          } else {
+                            fetchAllData();
+                          }
+                        }}
                         className={`border rounded-lg px-2 py-1 text-xs w-28 focus:ring-1 outline-none transition ${
                           isFgEmpty 
                             ? 'bg-white border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500' 
@@ -641,26 +652,7 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                       const dpAmount = Number(detailModalConfig.detail?.dp_amount || 0).toLocaleString();
                       const remainingBalance = Number(detailModalConfig.detail?.remaining_balance || 0).toLocaleString();
 
-                      const text = `Halo Kak ${nama} 😊
-Mengingatkan untuk jadwal photoshoot ya 📸✨
-
-🗓 Tanggal : ${tanggal}
-⏰ Jam : ${jam}
-📍 Lokasi : ${lokasi}
-🏫 Kampus : ${kampus}
-📌 Paket : ${paket}
-📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}
-
-Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
-📌 DP : Rp ${dpAmount}
-📌 Sisa pembayaran : Rp ${remainingBalance}
-
-💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
-
-Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
-📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
-
-Terima kasih, sampai jumpa di hari H ✨📸🎓`;
+                      const text = `Halo Kak ${nama} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${tanggal}\n⏰ Jam : ${jam}\n📍 Lokasi : ${lokasi}\n🏫 Kampus : ${kampus}\n📌 Paket : ${paket}\n📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${dpAmount}\n📌 Sisa pembayaran : Rp ${remainingBalance}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
 
                       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
                     }}
