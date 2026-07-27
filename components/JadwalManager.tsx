@@ -120,12 +120,12 @@ export default function JadwalManager() {
         await supabase.from('jadwal').update({ is_synced: true }).eq('id', item.id);
         await fetchAllData();
 
-        setAlertModal({ isOpen: true, message: `Status berhasil diubah ke 'Done' dan jadwal tersinkronisasi dengan durasi ${durasiMenit} menit!` });
+        setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
       } else {
-        setAlertModal({ isOpen: true, message: "Status berhasil disimpan di database, namun Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
+        setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
       }
     } catch (err) {
-      setAlertModal({ isOpen: true, message: "Status tersimpan, namun Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
+      setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
     }
   };
 
@@ -142,18 +142,6 @@ export default function JadwalManager() {
       if (field === 'payment_status' && value === 'LUNAS') {
         if (item) {
           await supabase.from('clients').update({ is_done: true }).eq('name', item.nama_klien);
-        }
-      }
-
-      if (field === 'is_done' && value === true) {
-        if (status === "loading") {
-          setAlertModal({ isOpen: true, message: "Memuat sesi, silakan tunggu sebentar..." });
-          return;
-        }
-
-        const detail = bookings.find(b => b.id === item?.booking_id);
-        if (item && detail) {
-          await syncToGoogle(item, detail);
         }
       }
 
@@ -319,16 +307,13 @@ export default function JadwalManager() {
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-center">
                     {item.is_synced ? (
-                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">
                         Schedule sudah diset kalender
                       </span>
                     ) : (
                       <button
                         onClick={() => syncToGoogle(item, detail)}
-                        className="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full transition"
+                        className="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full transition whitespace-nowrap"
                       >
                         Set ke Kalender
                       </button>
