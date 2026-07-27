@@ -367,7 +367,6 @@ export default function JadwalManager() {
         />
       )}
 
-      {/* Detail Modal dengan Tabs & Tombol Reschedule */}
       {detailModalConfig.isOpen && detailModalConfig.item && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
@@ -413,7 +412,6 @@ export default function JadwalManager() {
                 </button>
               </div>
 
-              {/* Tombol Jadwalkan Kalender & Reschedule */}
               <div className="flex items-center gap-3">
                 {detailModalConfig.item.is_done ? (
                   <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-md text-xs font-semibold">
@@ -652,9 +650,9 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                       const dpAmount = Number(detailModalConfig.detail?.dp_amount || 0).toLocaleString();
                       const remainingBalance = Number(detailModalConfig.detail?.remaining_balance || 0).toLocaleString();
 
-                      const text = `Halo Kak ${nama} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${tanggal}\n⏰ Jam : ${jam}\n📍 Lokasi : ${lokasi}\n🏫 Kampus : ${kampus}\n📌 Paket : ${paket}\n📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${dpAmount}\n📌 Sisa pembayaran : Rp ${remainingBalance}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
+                      const text = `Halo Kak ${nama} 😊%0AMengingatkan untuk jadwal photoshoot ya 📸✨%0A%0A🗓 Tanggal : ${tanggal}%0A⏰ Jam : ${jam}%0A📍 Lokasi : ${lokasi}%0A🏫 Kampus : ${kampus}%0A📌 Paket : ${paket}%0A📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}%0A%0AUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏%0A📌 DP : Rp ${dpAmount}%0A📌 Sisa pembayaran : Rp ${remainingBalance}%0A%0A💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)%0A%0ASetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊%0A📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.%0A%0ATerima kasih, sampai jumpa di hari H ✨📸🎓`;
 
-                      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+                      window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
                     }}
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition text-sm flex items-center justify-center gap-2"
                   >
