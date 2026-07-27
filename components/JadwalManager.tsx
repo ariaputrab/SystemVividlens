@@ -117,6 +117,10 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
+        // Update is_synced to true in database
+        await supabase.from('jadwal').update({ is_synced: true }).eq('id', item.id);
+        await fetchAllData();
+
         setAlertModal({ isOpen: true, message: `Status berhasil diubah ke 'Done' dan jadwal tersinkronisasi dengan durasi ${durasiMenit} menit!` });
       } else {
         setAlertModal({ isOpen: true, message: "Status berhasil disimpan di database, namun Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
@@ -192,7 +196,8 @@ export default function JadwalManager() {
         DP: detail.dp_amount || 0,
         Sisa: detail.remaining_balance || 0,
         Status_Bayar: item.payment_status || 'DP',
-        Selesai: item.is_done ? 'Ya' : 'Tidak'
+        Selesai: item.is_done ? 'Ya' : 'Tidak',
+        Synced_Calendar: item.is_synced ? 'Sudah' : 'Belum'
       };
     });
     const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -235,7 +240,7 @@ export default function JadwalManager() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1200px] text-left border-collapse text-sm sm:text-base">
+        <table className="w-full min-w-[1300px] text-left border-collapse text-sm sm:text-base">
           <thead>
             <tr className="text-slate-500 uppercase text-[10px] sm:text-[11px] tracking-widest border-b border-slate-100">
               <th className="px-3 py-2 sm:px-4 sm:py-3">Klien</th>
@@ -250,6 +255,7 @@ export default function JadwalManager() {
               <th className="px-3 py-2 sm:px-4 sm:py-3">Fee Freelance</th>
               <th className="px-3 py-2 sm:px-4 sm:py-3">Status Foto</th>
               <th className="px-3 py-2 sm:px-4 sm:py-3">Status Bayar</th>
+              <th className="px-3 py-2 sm:px-4 sm:py-3">Kalender</th>
               <th className="px-3 py-2 sm:px-4 sm:py-3">Aksi</th>
             </tr>
           </thead>
@@ -311,6 +317,20 @@ export default function JadwalManager() {
                       <option value="DP">DP</option>
                       <option value="LUNAS">LUNAS</option>
                     </select>
+                  </td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-center">
+                    {item.is_synced ? (
+                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Terset
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-xs font-medium px-2.5 py-1 rounded-full">
+                        Belum
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3">
                     <button onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })} className="text-indigo-600 hover:text-indigo-700 font-bold text-sm underline">
