@@ -208,6 +208,21 @@ export default function JadwalManager() {
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
+  // Helper Variabel Data Chat WhatsApp agar bersih & aman dari error encoding
+  const getWaMessageVariables = () => {
+    const nama = detailModalConfig.item?.nama_klien || '';
+    const tanggal = detailModalConfig.item?.tanggal ? new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const jam = detailModalConfig.item?.jam?.substring(0, 5) || '';
+    const lokasi = detailModalConfig.detail?.lokasi || '-';
+    const kampus = detailModalConfig.detail?.kampus || '-';
+    const paket = detailModalConfig.detail?.paket || '-';
+    const whatsapp = detailModalConfig.detail?.whatsapp || 'Tidak tersedia';
+    const dpAmount = Number(detailModalConfig.detail?.dp_amount || 0).toLocaleString();
+    const remainingBalance = Number(detailModalConfig.detail?.remaining_balance || 0).toLocaleString();
+
+    return { nama, tanggal, jam, lokasi, kampus, paket, whatsapp, dpAmount, remainingBalance };
+  };
+
   return (
     <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm w-full text-slate-800">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
@@ -607,59 +622,36 @@ export default function JadwalManager() {
                 </div>
               )}
 
-              {detailModalConfig.activeTab === 'chat' && (
-                <div className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-xs text-slate-600 max-h-96 overflow-y-auto font-mono">
-                    {`Halo Kak ${detailModalConfig.item.nama_klien} 😊
-Mengingatkan untuk jadwal photoshoot ya 📸✨
+              {detailModalConfig.activeTab === 'chat' && (() => {
+                const { nama, tanggal, jam, lokasi, kampus, paket, whatsapp, dpAmount, remainingBalance } = getWaMessageVariables();
+                const rawPreviewText = `Halo Kak ${nama} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${tanggal}\n⏰ Jam : ${jam}\n📍 Lokasi : ${lokasi}\n🏫 Kampus : ${kampus}\n📌 Paket : ${paket}\n📞 WhatsApp : ${whatsapp}\n\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${dpAmount}\n📌 Sisa pembayaran : Rp ${remainingBalance}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${whatsapp} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
 
-🗓 Tanggal : ${new Date(detailModalConfig.item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-⏰ Jam : ${detailModalConfig.item.jam?.substring(0, 5)}
-📍 Lokasi : ${detailModalConfig.detail.lokasi || '-'}
-🏫 Kampus : ${detailModalConfig.detail.kampus || '-'}
-📌 Paket : ${detailModalConfig.detail.paket || '-'}
-📞 WhatsApp : ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'}
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-xs text-slate-600 max-h-96 overflow-y-auto font-mono">
+                      {rawPreviewText}
+                    </div>
 
-Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
-📌 DP : Rp ${(detailModalConfig.detail.dp_amount || 0).toLocaleString()}
-📌 Sisa pembayaran : Rp ${(detailModalConfig.detail.remaining_balance || 0).toLocaleString()}
+                    <button
+                      onClick={() => {
+                        let phone = detailModalConfig.detail?.whatsapp || "";
+                        if (phone.startsWith('0')) {
+                          phone = '62' + phone.slice(1);
+                        } else {
+                          phone = phone.replace(/\D/g, '');
+                        }
 
-💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
+                        const text = `Halo Kak ${nama} 😊%0AMengingatkan untuk jadwal photoshoot ya 📸✨%0A%0A🗓 Tanggal : ${tanggal}%0A⏰ Jam : ${jam}%0A📍 Lokasi : ${lokasi}%0A🏫 Kampus : ${kampus}%0A📌 Paket : ${paket}%0A📞 WhatsApp : ${whatsapp}%0A%0AUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏%0A📌 DP : Rp ${dpAmount}%0A📌 Sisa pembayaran : Rp ${remainingBalance}%0A%0A💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)%0A%0ASetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊%0A📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${whatsapp} sebelum sesi dimulai ya.%0A%0ATerima kasih, sampai jumpa di hari H ✨📸🎓`;
 
-Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
-📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${detailModalConfig.item.nama_klien} di nomor ${detailModalConfig.detail.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
-
-Terima kasih, sampai jumpa di hari H ✨📸🎓`}
+                        window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition text-sm flex items-center justify-center gap-2"
+                    >
+                      💬 Kirim Pesan WhatsApp
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => {
-                      let phone = detailModalConfig.detail?.whatsapp || "";
-                      if (phone.startsWith('0')) {
-                        phone = '62' + phone.slice(1);
-                      } else {
-                        phone = phone.replace(/\D/g, '');
-                      }
-
-                      const nama = detailModalConfig.item?.nama_klien || '';
-                      const tanggal = new Date(detailModalConfig.item?.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                      const jam = detailModalConfig.item?.jam?.substring(0, 5) || '';
-                      const lokasi = detailModalConfig.detail?.lokasi || '-';
-                      const kampus = detailModalConfig.detail?.kampus || '-';
-                      const paket = detailModalConfig.detail?.paket || '-';
-                      const dpAmount = Number(detailModalConfig.detail?.dp_amount || 0).toLocaleString();
-                      const remainingBalance = Number(detailModalConfig.detail?.remaining_balance || 0).toLocaleString();
-
-                      const text = `Halo Kak ${nama} 😊%0AMengingatkan untuk jadwal photoshoot ya 📸✨%0A%0A🗓 Tanggal : ${tanggal}%0A⏰ Jam : ${jam}%0A📍 Lokasi : ${lokasi}%0A🏫 Kampus : ${kampus}%0A📌 Paket : ${paket}%0A📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}%0A%0AUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏%0A📌 DP : Rp ${dpAmount}%0A📌 Sisa pembayaran : Rp ${remainingBalance}%0A%0A💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)%0A%0ASetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊%0A📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${nama} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.%0A%0ATerima kasih, sampai jumpa di hari H ✨📸🎓`;
-
-                      window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
-                    }}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition text-sm flex items-center justify-center gap-2"
-                  >
-                    💬 Kirim Pesan WhatsApp
-                  </button>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>
