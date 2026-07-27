@@ -306,23 +306,17 @@ export default function JadwalManager() {
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm font-bold text-[#266CA9]">Rp {(detail.dp_amount || 0).toLocaleString('id-ID')}</td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm font-bold text-rose-600">Rp {(detail.remaining_balance || 0).toLocaleString('id-ID')}</td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3">
-                    <select
+                    <input
+                      type="number"
                       value={detail.freelance_fee ?? ''}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        setBookings((prev) => prev.map(b => b.id === detail.id ? { ...b, freelance_fee: value === '' ? null : Number(value) } : b));
-                        updateFreelanceFee(detail.id, value);
+                        const val = e.target.value;
+                        setBookings((prev) => prev.map(b => b.id === detail.id ? { ...b, freelance_fee: val === '' ? null : Number(val) } : b));
                       }}
+                      onBlur={(e) => updateFreelanceFee(detail.id, e.target.value)}
+                      placeholder="Fee..."
                       className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs w-28 focus:ring-1 focus:ring-indigo-500 outline-none"
-                    >
-                      <option value="">Pilih...</option>
-                      <option value="100000">Rp 100rb</option>
-                      <option value="150000">Rp 150rb</option>
-                      <option value="200000">Rp 200rb</option>
-                      <option value="225000">Rp 225rb</option>
-                      <option value="250000">Rp 250rb</option>
-                      <option value="300000">Rp 300rb</option>
-                    </select>
+                    />
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3">
                     <select
@@ -510,28 +504,24 @@ export default function JadwalManager() {
 
                   <div>
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Fee Freelance</p>
-                    <select
+                    <input
+                      type="number"
                       value={detailModalConfig.detail?.freelance_fee ?? ''}
                       onChange={(e) => {
-                        const value = e.target.value;
+                        const val = e.target.value;
                         setDetailModalConfig((prev: any) => ({
                           ...prev,
-                          detail: { ...prev.detail, freelance_fee: value === '' ? null : Number(value) }
+                          detail: { ...prev.detail, freelance_fee: val === '' ? null : Number(val) }
                         }));
+                      }}
+                      onBlur={(e) => {
                         if (detailModalConfig.detail?.id) {
-                          updateBookingField(detailModalConfig.detail.id, 'freelance_fee', value === '' ? null : Number(value));
+                          updateBookingField(detailModalConfig.detail.id, 'freelance_fee', e.target.value === '' ? null : Number(e.target.value));
                         }
                       }}
+                      placeholder="Masukkan nominal fee..."
                       className="mt-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm w-full focus:ring-1 focus:ring-indigo-500 outline-none font-medium text-slate-800"
-                    >
-                      <option value="">Pilih Fee Freelance...</option>
-                      <option value="100000">Rp 100.000</option>
-                      <option value="150000">Rp 150.000</option>
-                      <option value="200000">Rp 200.000</option>
-                      <option value="225000">Rp 225.000</option>
-                      <option value="250000">Rp 250.000</option>
-                      <option value="300000">Rp 300.000</option>
-                    </select>
+                    />
                     <p className="text-xs text-slate-500 mt-2">Rp {Number(detailModalConfig.detail?.freelance_fee || 0).toLocaleString('id-ID')}</p>
                   </div>
 
