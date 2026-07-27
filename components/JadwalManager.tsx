@@ -61,14 +61,24 @@ export default function JadwalManager() {
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
+        const { data: latestJadwalItem } = await supabase
+          .from('jadwal')
+          .select('*')
+          .eq('id', detailModalConfig.item.id)
+          .single();
+
         const { data: latestBooking } = await supabase
           .from('Booking')
           .select('*')
           .eq('id', detailModalConfig.item.booking_id)
           .single();
         
-        if (latestBooking) {
-          setDetailModalConfig((prev: any) => ({ ...prev, detail: latestBooking }));
+        if (latestJadwalItem || latestBooking) {
+          setDetailModalConfig((prev: any) => ({
+            ...prev,
+            item: latestJadwalItem || prev.item,
+            detail: latestBooking || prev.detail
+          }));
         }
       };
       refreshDetailData();
@@ -119,7 +129,6 @@ export default function JadwalManager() {
         await supabase.from('jadwal').update({ is_synced: true }).eq('id', item.id);
         await fetchAllData();
 
-        // Update state modal juga agar langsung berubah jadi status tersinkron tanpa tutup modal
         const { data: updatedJadwalItem } = await supabase.from('jadwal').select('*').eq('id', item.id).single();
         if (updatedJadwalItem && detailModalConfig.isOpen) {
           setDetailModalConfig((prev: any) => ({ ...prev, item: updatedJadwalItem }));
@@ -382,7 +391,7 @@ export default function JadwalManager() {
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Status Google Calendar</p>
                       <p className="text-sm font-semibold mt-1">
-                        {detailModalConfig.item.is_synced ? (
+                        {detailModalConfig.item?.is_synced ? (
                           <span className="text-green-700 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
                             Sudah diset ke Kalender
@@ -395,7 +404,7 @@ export default function JadwalManager() {
                         )}
                       </p>
                     </div>
-                    {!detailModalConfig.item.is_synced && (
+                    {!detailModalConfig.item?.is_synced && (
                       <button
                         onClick={() => syncToGoogle(detailModalConfig.item, detailModalConfig.detail)}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition shadow-sm"
