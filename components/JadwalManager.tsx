@@ -118,6 +118,13 @@ export default function JadwalManager() {
       if (response.ok && result.success) {
         await supabase.from('jadwal').update({ is_synced: true }).eq('id', item.id);
         await fetchAllData();
+
+        // Update state modal juga agar langsung berubah jadi status tersinkron tanpa tutup modal
+        const { data: updatedJadwalItem } = await supabase.from('jadwal').select('*').eq('id', item.id).single();
+        if (updatedJadwalItem && detailModalConfig.isOpen) {
+          setDetailModalConfig((prev: any) => ({ ...prev, item: updatedJadwalItem }));
+        }
+
         setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
       } else {
         setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
@@ -224,7 +231,7 @@ export default function JadwalManager() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1300px] text-left border-collapse text-sm sm:text-base">
+        <table className="w-full min-w-[1200px] text-left border-collapse text-sm sm:text-base">
           <thead>
             <tr className="text-slate-500 uppercase text-[10px] sm:text-[11px] tracking-widest border-b border-slate-100">
               <th className="px-3 py-2 sm:px-4 sm:py-3">Klien</th>
@@ -239,7 +246,6 @@ export default function JadwalManager() {
               <th className="px-3 py-2 sm:px-4 sm:py-3">Fee Freelance</th>
               <th className="px-3 py-2 sm:px-4 sm:py-3">Status Foto</th>
               <th className="px-3 py-2 sm:px-4 sm:py-3">Status Bayar</th>
-              <th className="px-3 py-2 sm:px-4 sm:py-3">Kalender</th>
               <th className="px-3 py-2 sm:px-4 sm:py-3">Aksi</th>
             </tr>
           </thead>
@@ -302,20 +308,6 @@ export default function JadwalManager() {
                       <option value="LUNAS">LUNAS</option>
                     </select>
                   </td>
-                  <td className="px-3 py-2 sm:px-4 sm:py-3 text-center">
-                    {item.is_synced ? (
-                      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">
-                        Schedule sudah diset kalender
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => syncToGoogle(item, detail)}
-                        className="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full transition whitespace-nowrap"
-                      >
-                        Set ke Kalender
-                      </button>
-                    )}
-                  </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3">
                     <button onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })} className="text-indigo-600 hover:text-indigo-700 font-bold text-sm underline">
                       Detail
@@ -339,7 +331,7 @@ export default function JadwalManager() {
       {detailModalConfig.isOpen && detailModalConfig.item && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start z-10">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">{detailModalConfig.item.nama_klien}</h2>
                 <p className="text-xs text-slate-500 mt-1">Detail Jadwal & Booking</p>
@@ -385,6 +377,34 @@ export default function JadwalManager() {
             <div className="p-6">
               {detailModalConfig.activeTab === 'details' && (
                 <div className="space-y-5">
+                  {/* Bagian Status Google Calendar di dalam Modal Detail */}
+                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Status Google Calendar</p>
+                      <p className="text-sm font-semibold mt-1">
+                        {detailModalConfig.item.is_synced ? (
+                          <span className="text-green-700 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                            Sudah diset ke Kalender
+                          </span>
+                        ) : (
+                          <span className="text-amber-600 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                            Belum diset ke Kalender
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {!detailModalConfig.item.is_synced && (
+                      <button
+                        onClick={() => syncToGoogle(detailModalConfig.item, detailModalConfig.detail)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition shadow-sm"
+                      >
+                        Set ke Kalender
+                      </button>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Tanggal</p>
