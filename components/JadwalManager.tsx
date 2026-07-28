@@ -214,7 +214,9 @@ export default function JadwalManager() {
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const isScheduleEmpty = !currentModalItem?.tanggal;
 
-  const isCalendarSynced = Boolean(detailModalConfig.detail?.calendar_synced || detailModalConfig.detail?.calendar_event_id);
+  // Sinkronisasi status kalender dibaca langsung dari kolom database Booking (calendar_synced / calendar_event_id)
+  const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
+  const isCalendarSynced = Boolean(currentBookingDetail?.calendar_synced || currentBookingDetail?.calendar_event_id);
 
   return (
     <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm w-full text-slate-800">
