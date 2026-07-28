@@ -214,7 +214,6 @@ export default function JadwalManager() {
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const isScheduleEmpty = !currentModalItem?.tanggal;
 
-  // Cek data booking terkini dari state bookings atau detailModalConfig untuk akurasi status kalender
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   const isCalendarSynced = Boolean(
     currentBookingDetail?.calendar_synced === true || 
@@ -267,10 +266,21 @@ export default function JadwalManager() {
               const detail = bookings.find(b => b.id === item.booking_id) || {};
               const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "";
               const isScheduleEmptyRow = !item.tanggal;
+              
+              // Pengecekan status kalender per baris data
+              const isRowCalendarSynced = Boolean(
+                detail?.calendar_synced === true || 
+                (detail?.calendar_event_id && detail?.calendar_event_id !== '')
+              );
 
               return (
                 <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition ${item.is_done ? 'bg-green-50/30' : ''}`}>
-                  <td className="px-3 py-2 sm:px-4 sm:py-3 font-semibold text-slate-900 cursor-pointer hover:text-indigo-600" onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })}>{item.nama_klien}</td>
+                  <td className="px-3 py-2 sm:px-4 sm:py-3 font-semibold text-slate-900 cursor-pointer hover:text-indigo-600 flex items-center gap-2" onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })}>
+                    <span>{item.nama_klien}</span>
+                    {isRowCalendarSynced && (
+                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium" title="Sudah Diset di Kalender">📅 Done</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 relative">
                     <div className="flex items-center gap-1.5">
                       <input 
