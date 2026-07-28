@@ -69,8 +69,18 @@ export default function JadwalManager() {
           .eq('id', detailModalConfig.item.booking_id)
           .single();
         
-        if (latestBooking) {
-          setDetailModalConfig((prev: any) => ({ ...prev, detail: latestBooking }));
+        const { data: latestJadwalItem } = await supabase
+          .from('jadwal')
+          .select('*')
+          .eq('id', detailModalConfig.item.id)
+          .single();
+
+        if (latestBooking || latestJadwalItem) {
+          setDetailModalConfig((prev: any) => ({
+            ...prev,
+            item: latestJadwalItem || prev.item,
+            detail: latestBooking || prev.detail
+          }));
         }
       };
       refreshDetailData();
@@ -90,7 +100,7 @@ export default function JadwalManager() {
       return;
     }
 
-    const paket = detail.paket || "";
+    const paket = detail?.paket || "";
     let durasiMenit = 60;
 
     if (paket.includes("30")) {
@@ -119,13 +129,25 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
+        const eventIdVal = result.eventId || 'synced';
         if (detail?.id) {
-          await supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: result.eventId || 'synced' }).eq('id', detail.id);
+          await supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', detail.id);
         }
         if (item?.id) {
-          await supabase.from('jadwal').update({ calendar_synced: true, calendar_event_id: result.eventId || 'synced' }).eq('id', item.id);
+          await supabase.from('jadwal').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', item.id);
         }
+        
         await fetchAllData();
+
+        // Update state detail modal secara langsung agar tombol berubah tanpa harus tutup modal
+        const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
+        const updatedDetail = detail ? { ...detail, calendar_synced: true, calendar_event_id: eventIdVal } : null;
+        setDetailModalConfig((prev: any) => ({
+          ...prev,
+          item: updatedItem,
+          detail: updatedDetail
+        }));
+
         setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
       } else {
         setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
@@ -163,7 +185,7 @@ export default function JadwalManager() {
           const updatedItem = latestJadwal.find(j => j.id === id);
           const updatedDetail = latestBookings.find(b => b.id === item.booking_id);
           if (updatedItem && updatedDetail) {
-            setDetailModalConfig({ ...detailModalConfig, item: updatedItem, detail: updatedDetail });
+            setDetailModalConfig((prev: any) => ({ ...prev, item: updatedItem, detail: updatedDetail }));
           }
         }
       }, 100);
@@ -218,11 +240,13 @@ export default function JadwalManager() {
   const isScheduleEmpty = !currentModalItem?.tanggal;
 
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
-  const isCalendarSynced = Boolean(
-    currentModalItem?.calendar_synced === true ||
-    currentModalItem?.calendar_event_id ||
+  
+  // Pengecekan mutlak berdasarkan database untuk modal
+  const isModalCalendarSynced = Boolean(
+    currentModalItem?.calendar_synced === true || 
+    Boolean(currentModalItem?.calendar_event_id && currentModalItem?.calendar_event_id !== '') ||
     currentBookingDetail?.calendar_synced === true || 
-    (currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '')
+    Boolean(currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '')
   );
 
   return (
@@ -272,11 +296,12 @@ export default function JadwalManager() {
               const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "";
               const isScheduleEmptyRow = !item.tanggal;
               
+              // Pengecekan mutlak berdasarkan database untuk baris tabel
               const isRowCalendarSynced = Boolean(
-                item?.calendar_synced === true ||
-                item?.calendar_event_id ||
+                item?.calendar_synced === true || 
+                Boolean(item?.calendar_event_id && item?.calendar_event_id !== '') ||
                 detail?.calendar_synced === true || 
-                (detail?.calendar_event_id && detail?.calendar_event_id !== '')
+                Boolean(detail?.calendar_event_id && detail?.calendar_event_id !== '')
               );
 
               return (
@@ -622,7 +647,7 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
 
             <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
               <div className="w-full sm:w-auto">
-                {!isCalendarSynced ? (
+                {!isModalCalendarSynced ? (
                   <button
                     type="button"
                     onClick={() => syncToGoogle(currentModalItem, detailModalConfig.detail)}
@@ -635,7 +660,7 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                 ) : (
                   <div className="w-full sm:w-auto px-4 py-2 bg-green-100 text-green-700 font-medium rounded-lg border border-green-300 text-sm flex items-center justify-center gap-2 cursor-default select-none">
                     <span>✅</span>
-                    <span>Done Set</span>
+                    <span>Sudah Diset</span>
                   </div>
                 )}
               </div>
