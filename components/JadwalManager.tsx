@@ -139,7 +139,6 @@ export default function JadwalManager() {
         
         await fetchAllData();
 
-        // Update state detail modal secara langsung agar tombol berubah tanpa harus tutup modal
         const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
         const updatedDetail = detail ? { ...detail, calendar_synced: true, calendar_event_id: eventIdVal } : null;
         setDetailModalConfig((prev: any) => ({
@@ -237,11 +236,8 @@ export default function JadwalManager() {
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
-  const isScheduleEmpty = !currentModalItem?.tanggal;
-
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   
-  // Pengecekan mutlak berdasarkan database untuk modal
   const isModalCalendarSynced = Boolean(
     currentModalItem?.calendar_synced === true || 
     Boolean(currentModalItem?.calendar_event_id && currentModalItem?.calendar_event_id !== '') ||
@@ -296,7 +292,6 @@ export default function JadwalManager() {
               const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "";
               const isScheduleEmptyRow = !item.tanggal;
               
-              // Pengecekan mutlak berdasarkan database untuk baris tabel
               const isRowCalendarSynced = Boolean(
                 item?.calendar_synced === true || 
                 Boolean(item?.calendar_event_id && item?.calendar_event_id !== '') ||
@@ -459,6 +454,26 @@ export default function JadwalManager() {
             <div className="p-6">
               {detailModalConfig.activeTab === 'details' && (
                 <div className="space-y-5">
+                  <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Google Calendar Sync</p>
+                      <p className="text-sm font-semibold text-slate-800 mt-1">
+                        {isModalCalendarSynced ? '✅ Sudah masuk Google Calendar' : '⚠️ Belum disinkronkan'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => syncToGoogle(currentModalItem, currentBookingDetail)}
+                      disabled={isCalendarLoading}
+                      className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow-sm"
+                    >
+                      {isCalendarLoading ? (
+                        <span>Sedang Sync...</span>
+                      ) : (
+                        <span>{isModalCalendarSynced ? '🔄 Sync Ulang Kalender' : '📅 Sync ke Kalender'}</span>
+                      )}
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Kampus</p>
@@ -633,76 +648,37 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                     onClick={() => {
                       const tglStr = currentModalItem.tanggal ? new Date(currentModalItem.tanggal).toLocaleDateString('id-ID') : 'Belum diset';
                       const jamStr = currentModalItem.jam?.substring(0, 5) || 'Belum diset';
-                      const chat = `Halo Kak ${currentModalItem.nama_klien} 😊\nMengingatkan untuk jadwal photoshoot ya 📸✨\n\n🗓 Tanggal : ${tglStr}\n⏰ Jam : ${jamStr}\n📍 Lokasi : ${detailModalConfig.detail?.lokasi}\n🏫 Kampus : ${detailModalConfig.detail?.kampus}\n📌 Paket : ${detailModalConfig.detail?.paket}\n📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}\nUntuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏\n📌 DP : Rp ${(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}\n📌 Sisa pembayaran : Rp ${(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}\n\n💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)\n\nSetelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊\n📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${currentModalItem.nama_klien} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.\n\nTerima kasih, sampai jumpa di hari H ✨📸🎓`;
-                      navigator.clipboard.writeText(chat);
-                      setAlertModal({ isOpen: true, message: "Chat berhasil disalin!" });
+                      const text = `Halo Kak ${currentModalItem.nama_klien} 😊
+Mengingatkan untuk jadwal photoshoot ya 📸✨
+
+🗓 Tanggal : ${tglStr}
+⏰ Jam : ${jamStr}
+📍 Lokasi : ${detailModalConfig.detail?.lokasi || '-'}
+🏫 Kampus : ${detailModalConfig.detail?.kampus || '-'}
+📌 Paket : ${detailModalConfig.detail?.paket || '-'}
+📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}
+
+Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
+📌 DP : Rp ${(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}
+📌 Sisa pembayaran : Rp ${(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}
+
+💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
+
+Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
+📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${currentModalItem.nama_klien} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
+
+Terima kasih, sampai jumpa di hari H ✨📸🎓`;
+
+                      navigator.clipboard.writeText(text);
+                      setAlertModal({ isOpen: true, message: "Pesan WhatsApp berhasil disalin!" });
                     }}
-                    className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition text-sm flex items-center justify-center gap-2"
                   >
-                    Copy Chat
+                    <span>📋 Salin Pesan WhatsApp</span>
                   </button>
                 </div>
               )}
             </div>
-
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-              <div className="w-full sm:w-auto">
-                {!isModalCalendarSynced ? (
-                  <button
-                    type="button"
-                    onClick={() => syncToGoogle(currentModalItem, detailModalConfig.detail)}
-                    disabled={isCalendarLoading || isScheduleEmpty}
-                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow flex items-center justify-center gap-2 transition disabled:opacity-50"
-                  >
-                    <span>📅</span>
-                    {isCalendarLoading ? 'Menyimpan...' : 'Set Kalender'}
-                  </button>
-                ) : (
-                  <div className="w-full sm:w-auto px-4 py-2 bg-green-100 text-green-700 font-medium rounded-lg border border-green-300 text-sm flex items-center justify-center gap-2 cursor-default select-none">
-                    <span>✅</span>
-                    <span>Sudah Diset</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedBooking({
-                      id: detailModalConfig.detail?.id,
-                      booking_id: currentModalItem.booking_id,
-                      tanggal_foto: currentModalItem.tanggal,
-                      jam_foto: currentModalItem.jam
-                    });
-                  }}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg text-sm transition"
-                >
-                  Reschedule
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm transition"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {alertModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-center">
-            <p className="text-sm text-slate-800 mb-6">{alertModal.message}</p>
-            <button
-              onClick={() => setAlertModal({ isOpen: false, message: '' })}
-              className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2 rounded-lg text-sm transition"
-            >
-              OK
-            </button>
           </div>
         </div>
       )}
@@ -711,8 +687,22 @@ Terima kasih, sampai jumpa di hari H ✨📸🎓`}
         <Modal
           config={modalConfig}
           onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-          onSave={(id: string, field: string, value: any) => updateStatus(id, field, value)}
+          onSave={(value: any) => updateStatus(modalConfig.id, modalConfig.field, value)}
         />
+      )}
+
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 text-center space-y-4">
+            <p className="text-slate-800 text-sm">{alertModal.message}</p>
+            <button
+              onClick={() => setAlertModal({ isOpen: false, message: '' })}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
