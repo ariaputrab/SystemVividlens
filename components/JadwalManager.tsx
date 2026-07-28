@@ -121,8 +121,11 @@ export default function JadwalManager() {
       if (response.ok && result.success) {
         if (detail?.id) {
           await supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: result.eventId || 'synced' }).eq('id', detail.id);
-          await fetchAllData();
         }
+        if (item?.id) {
+          await supabase.from('jadwal').update({ calendar_synced: true, calendar_event_id: result.eventId || 'synced' }).eq('id', item.id);
+        }
+        await fetchAllData();
         setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
       } else {
         setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
@@ -216,6 +219,8 @@ export default function JadwalManager() {
 
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   const isCalendarSynced = Boolean(
+    currentModalItem?.calendar_synced === true ||
+    currentModalItem?.calendar_event_id ||
     currentBookingDetail?.calendar_synced === true || 
     (currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '')
   );
@@ -267,8 +272,9 @@ export default function JadwalManager() {
               const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "";
               const isScheduleEmptyRow = !item.tanggal;
               
-              // Pengecekan status kalender per baris data
               const isRowCalendarSynced = Boolean(
+                item?.calendar_synced === true ||
+                item?.calendar_event_id ||
                 detail?.calendar_synced === true || 
                 (detail?.calendar_event_id && detail?.calendar_event_id !== '')
               );
