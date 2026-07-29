@@ -22,7 +22,6 @@ export default function JadwalManager() {
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
 
-  // Ambil data dengan aman dan efisien
   const fetchAllData = useCallback(async () => {
     try {
       const [{ data: dataJadwal, error: errJadwal }, { data: dataBooking, error: errBooking }] = await Promise.all([
@@ -46,7 +45,6 @@ export default function JadwalManager() {
     fetchAllData(); 
   }, [fetchAllData]);
 
-  // Refresh data detail saat modal terbuka
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
@@ -146,6 +144,8 @@ export default function JadwalManager() {
 
       if (response.ok && result.success) {
         const eventIdVal = result.eventId || 'synced';
+        
+        // Update database Supabase secara eksplisit
         if (detail?.id) {
           await supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', detail.id);
         }
@@ -154,6 +154,7 @@ export default function JadwalManager() {
         }
         
         await fetchAllData();
+        
         const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
         const updatedDetail = detail ? { ...detail, calendar_synced: true, calendar_event_id: eventIdVal } : null;
         
@@ -162,6 +163,7 @@ export default function JadwalManager() {
           item: updatedItem,
           detail: updatedDetail
         }));
+        
         setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
       } else {
         setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
@@ -249,12 +251,16 @@ export default function JadwalManager() {
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   
-  const isModalCalendarSynced = Boolean(
-    currentModalItem?.calendar_synced === true || 
-    (currentModalItem?.calendar_event_id && currentModalItem?.calendar_event_id !== '' && currentModalItem?.calendar_event_id !== 'false') ||
-    currentBookingDetail?.calendar_synced === true || 
-    (currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '' && currentBookingDetail?.calendar_event_id !== 'false')
-  );
+  // LOGIKA PEMERIKSAAN SYNC YANG DIPERBAIKI SECARA KETAT
+  const checkIsSynced = (targetItem: any, targetDetail: any) => {
+    const itemSynced = targetItem?.calendar_synced === true || targetItem?.calendar_synced === 'true' || 
+                       (targetItem?.calendar_event_id && targetItem?.calendar_event_id !== '' && targetItem?.calendar_event_id !== 'false');
+    const detailSynced = targetDetail?.calendar_synced === true || targetDetail?.calendar_synced === 'true' || 
+                         (targetDetail?.calendar_event_id && targetDetail?.calendar_event_id !== '' && targetDetail?.calendar_event_id !== 'false');
+    return Boolean(itemSynced || detailSynced);
+  };
+
+  const isModalCalendarSynced = checkIsSynced(currentModalItem, currentBookingDetail);
 
   return (
     <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm w-full text-slate-800">
@@ -303,12 +309,7 @@ export default function JadwalManager() {
               const isFgEmpty = !item.nama_fg || item.nama_fg.trim() === "";
               const isScheduleEmptyRow = !item.tanggal;
               
-              const isRowCalendarSynced = Boolean(
-                item?.calendar_synced === true || 
-                (item?.calendar_event_id && item?.calendar_event_id !== '' && item?.calendar_event_id !== 'false') ||
-                detail?.calendar_synced === true || 
-                (detail?.calendar_event_id && detail?.calendar_event_id !== '' && detail?.calendar_event_id !== 'false')
-              );
+              const isRowCalendarSynced = checkIsSynced(item, detail);
 
               return (
                 <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition ${item.is_done ? 'bg-green-50/30' : ''}`}>
