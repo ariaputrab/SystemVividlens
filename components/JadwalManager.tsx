@@ -238,11 +238,14 @@ export default function JadwalManager() {
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   
+  // Perbaikan logika pengecekan sync agar lebih akurat mendeteksi status true/false dari database
   const isModalCalendarSynced = Boolean(
     currentModalItem?.calendar_synced === true || 
-    Boolean(currentModalItem?.calendar_event_id && currentModalItem?.calendar_event_id !== '') ||
+    currentModalItem?.calendar_event_id === true ||
+    (currentModalItem?.calendar_event_id && currentModalItem?.calendar_event_id !== '' && currentModalItem?.calendar_event_id !== 'false') ||
     currentBookingDetail?.calendar_synced === true || 
-    Boolean(currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '')
+    currentBookingDetail?.calendar_event_id === true ||
+    (currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '' && currentBookingDetail?.calendar_event_id !== 'false')
   );
 
   return (
@@ -294,9 +297,11 @@ export default function JadwalManager() {
               
               const isRowCalendarSynced = Boolean(
                 item?.calendar_synced === true || 
-                Boolean(item?.calendar_event_id && item?.calendar_event_id !== '') ||
+                item?.calendar_event_id === true ||
+                (item?.calendar_event_id && item?.calendar_event_id !== '' && item?.calendar_event_id !== 'false') ||
                 detail?.calendar_synced === true || 
-                Boolean(detail?.calendar_event_id && detail?.calendar_event_id !== '')
+                detail?.calendar_event_id === true ||
+                (detail?.calendar_event_id && detail?.calendar_event_id !== '' && detail?.calendar_event_id !== 'false')
               );
 
               return (
