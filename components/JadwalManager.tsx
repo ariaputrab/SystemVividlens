@@ -109,7 +109,7 @@ export default function JadwalManager() {
       durasiMenit = 30;
     } else if (
       paket.includes("90") || 
-      paket.includes("Plaosan B 2") || 
+      paket.includes("Plaosan B") || 
       paket.includes("Group Package 2") || 
       paket.includes("Group Package 3") || 
       paket.includes("Gold") || 
