@@ -7,10 +7,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, booking_id, new_start, new_end, item, detail, accessToken } = body;
 
-    console.log("DEBUG API: Aksi:", action, "| booking_id:", booking_id || item?.booking_id);
-
     if (!accessToken) {
-      console.error("DEBUG API ERROR: Token tidak ditemukan dalam request body");
       return NextResponse.json({ error: "Token tidak ditemukan" }, { status: 401 });
     }
 
@@ -26,16 +23,15 @@ export async function POST(req: NextRequest) {
 
     // 1. Aksi RESCHEDULE
     if (action === 'reschedule') {
-      const { data: booking, error: dbError } = await supabase
+      const { data: booking } = await supabase
         .from('Booking')
         .select('google_event_id, calendar_event_id')
         .eq('id', targetBookingId)
         .single();
 
       const eventIdToUpdate = booking?.google_event_id || booking?.calendar_event_id;
-
-      if (dbError || !booking || !eventIdToUpdate) {
-        throw new Error("Google Event ID tidak ditemukan di database. Lakukan sync/set done terlebih dahulu.");
+      if (!eventIdToUpdate) {
+        throw new Error("Event ID tidak ditemukan di kalender.");
       }
 
       await calendar.events.patch({
@@ -47,36 +43,34 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log("DEBUG: Reschedule sukses ke Google Calendar.");
       return NextResponse.json({ success: true, message: "Kalender berhasil diperbarui" });
     }
 
-    // 2. Aksi SYNC / CEK APAKAH SUDAH PERNAH ADA EVENT ID-NYA
-    // Cek di tabel jadwal & booking apakah sudah ada event ID sebelumnya
+    // 2. CEK APAKAH SUDAH ADA EVENT ID DI DATABASE
     let existingEventId = item?.google_event_id || item?.calendar_event_id;
 
     if (!existingEventId && targetJadwalId) {
-      const { data: jadwalData } = await supabase
+      const { data: jData } = await supabase
         .from('jadwal')
         .select('google_event_id, calendar_event_id')
         .eq('id', targetJadwalId)
         .single();
-      existingEventId = jadwalData?.google_event_id || jadwalData?.calendar_event_id;
+      existingEventId = jData?.google_event_id || jData?.calendar_event_id;
     }
 
     if (!existingEventId && targetBookingId) {
-      const { data: bookingData } = await supabase
+      const { data: bData } = await supabase
         .from('Booking')
         .select('google_event_id, calendar_event_id')
         .eq('id', targetBookingId)
         .single();
-      existingEventId = bookingData?.google_event_id || bookingData?.calendar_event_id;
+      existingEventId = bData?.google_event_id || bData?.calendar_event_id;
     }
 
     let finalEventId = existingEventId;
 
     if (existingEventId) {
-      // Jika event sudah pernah dibuat sebelumnya, CUKUP UPDATE (PATCH) agar tidak double!
+      // JIKA SUDAH ADA: Cukup PATCH (Update jam/tanggal), JANGAN INSERT LAGI BIAR TIDAK DOUBLE!
       try {
         await calendar.events.patch({
           calendarId: 'primary',
@@ -88,10 +82,8 @@ export async function POST(req: NextRequest) {
             end: { dateTime: item.endTime },
           },
         });
-        console.log("DEBUG: Event sudah ada, berhasil di-update (tanpa double):", existingEventId);
-      } catch (patchErr) {
-        // Jika event aslinya sudah terhapus di Google Calendar, buat baru (insert)
-        console.warn("Event lama tidak ditemukan di Google Calendar, membuat baru...", patchErr);
+      } catch (err) {
+        // Kalau ternyata event aslinya sudah terhapus manual di Google Calendar, buat baru
         const resNew = await calendar.events.insert({
           calendarId: 'primary',
           requestBody: {
@@ -104,7 +96,7 @@ export async function POST(req: NextRequest) {
         finalEventId = resNew.data.id;
       }
     } else {
-      // Jika benar-benar belum pernah sync, buat baru (insert)
+      // JIKA BELUM ADA SAMA SEKALI: Baru buat event baru (Insert)
       const res = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
@@ -117,45 +109,23 @@ export async function POST(req: NextRequest) {
       finalEventId = res.data.id;
     }
 
-    // Update status dan event ID ke database Supabase
+    // Simpan status dan event ID ke database secara serentak
     const updatePromises = [];
-
     if (targetBookingId) {
       updatePromises.push(
-        supabase
-          .from('Booking')
-          .update({ 
-            google_event_id: finalEventId, 
-            calendar_event_id: finalEventId,
-            calendar_synced: true 
-          })
-          .eq('id', targetBookingId)
+        supabase.from('Booking').update({ google_event_id: finalEventId, calendar_event_id: finalEventId, calendar_synced: true }).eq('id', targetBookingId)
       );
     }
-
     if (targetJadwalId) {
       updatePromises.push(
-        supabase
-          .from('jadwal')
-          .update({ 
-            google_event_id: finalEventId, 
-            calendar_event_id: finalEventId,
-            calendar_synced: true 
-          })
-          .eq('id', targetJadwalId)
+        supabase.from('jadwal').update({ google_event_id: finalEventId, calendar_event_id: finalEventId, calendar_synced: true }).eq('id', targetJadwalId)
       );
     }
-
     await Promise.all(updatePromises);
 
-    console.log("DEBUG: Sync aman, Event ID:", finalEventId);
     return NextResponse.json({ success: true, eventId: finalEventId });
-    
+
   } catch (error: any) {
-    console.error("DEBUG ERROR LENGKAP:", error);
-    return NextResponse.json({ 
-      error: "Gagal memproses kalender", 
-      details: error.message 
-    }, { status: 500 });
+    return NextResponse.json({ error: "Gagal memproses kalender", details: error.message }, { status: 500 });
   }
 }
