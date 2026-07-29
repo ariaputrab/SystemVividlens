@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
@@ -12,54 +12,41 @@ export default function JadwalManager() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [searchKlien, setSearchKlien] = useState("");
-
   const [modalConfig, setModalConfig] = useState<any>({
     isOpen: false, type: 'FG', id: '', value: '', field: '', data: null
   });
-
   const [detailModalConfig, setDetailModalConfig] = useState<any>({
     isOpen: false, item: null, detail: null, activeTab: 'details'
   });
-
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' });
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
 
-  const updateBookingField = async (bookingId: string | undefined, field: string, value: any) => {
-    if (!bookingId) return;
+  // Ambil data dengan aman dan efisien
+  const fetchAllData = useCallback(async () => {
+    try {
+      const [{ data: dataJadwal, error: errJadwal }, { data: dataBooking, error: errBooking }] = await Promise.all([
+        supabase.from('jadwal').select('*'),
+        supabase.from('Booking').select('*')
+      ]);
 
-    const payload = { [field]: value === '' ? null : value };
-    const { error } = await supabase.from('Booking').update(payload).eq('id', bookingId);
+      if (errJadwal || errBooking) {
+        console.error("Gagal mengambil data:", errJadwal?.message || errBooking?.message);
+        return;
+      }
 
-    if (error) {
-      setAlertModal({ isOpen: true, message: `Gagal menyimpan ${field.replace(/_/g, ' ')}: ${error.message}` });
-      return;
+      setJadwal(dataJadwal || []);
+      setBookings(dataBooking || []);
+    } catch (err) {
+      console.error("Kesalahan jaringan saat fetch data:", err);
     }
+  }, []);
 
-    setBookings((prev) => prev.map(b => b.id === bookingId ? { ...b, [field]: payload[field] } : b));
+  useEffect(() => { 
+    fetchAllData(); 
+  }, [fetchAllData]);
 
-    if (detailModalConfig.detail?.id === bookingId) {
-      setDetailModalConfig((prev: any) => ({
-        ...prev,
-        detail: { ...prev.detail, [field]: payload[field] }
-      }));
-    }
-  };
-
-  const updateFreelanceFee = async (bookingId: string | undefined, rawValue: string) => {
-    await updateBookingField(bookingId, 'freelance_fee', rawValue === '' ? null : Number(rawValue));
-  };
-
-  const fetchAllData = async () => {
-    const { data: dataJadwal } = await supabase.from('jadwal').select('*');
-    const { data: dataBooking } = await supabase.from('Booking').select('*');
-
-    setJadwal(dataJadwal || []);
-    setBookings(dataBooking || []);
-  };
-
-  useEffect(() => { fetchAllData(); }, []);
-
+  // Refresh data detail saat modal terbuka
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
@@ -85,16 +72,39 @@ export default function JadwalManager() {
       };
       refreshDetailData();
     }
-  }, [detailModalConfig.isOpen]);
+  }, [detailModalConfig.isOpen, detailModalConfig.item?.id]);
+
+  const updateBookingField = async (bookingId: string | undefined, field: string, value: any) => {
+    if (!bookingId) return;
+    const cleanValue = value === '' ? null : value;
+    const payload = { [field]: cleanValue };
+
+    const { error } = await supabase.from('Booking').update(payload).eq('id', bookingId);
+    if (error) {
+      setAlertModal({ isOpen: true, message: `Gagal menyimpan ${field.replace(/_/g, ' ')}: ${error.message}` });
+      return;
+    }
+
+    setBookings((prev) => prev.map(b => b.id === bookingId ? { ...b, [field]: cleanValue } : b));
+    if (detailModalConfig.detail?.id === bookingId) {
+      setDetailModalConfig((prev: any) => ({
+        ...prev,
+        detail: { ...prev.detail, [field]: cleanValue }
+      }));
+    }
+  };
+
+  const updateFreelanceFee = async (bookingId: string | undefined, rawValue: string) => {
+    const numericValue = rawValue === '' ? null : Number(rawValue);
+    await updateBookingField(bookingId, 'freelance_fee', isNaN(numericValue as number) ? null : numericValue);
+  };
 
   const syncToGoogle = async (item: any, detail: any) => {
     if (status !== "authenticated") {
       setAlertModal({ isOpen: true, message: "Sesi tidak ditemukan atau belum login. Silakan login kembali." });
       return;
     }
-
     const accessToken = (session as any)?.accessToken;
-
     if (!accessToken) {
       setAlertModal({ isOpen: true, message: "Token akses kalender tidak ditemukan. Silakan login ulang dengan akses kalender." });
       return;
@@ -102,19 +112,26 @@ export default function JadwalManager() {
 
     const paket = detail?.paket || "";
     let durasiMenit = 60;
-
     if (paket.includes("30")) {
       durasiMenit = 30;
-    } else if (paket.includes("90") || paket.includes("Group Package 2") || paket.includes("Group Package 3") || paket.includes("Gold") || paket.includes("Premium")) {
+    } else if (
+      paket.includes("90") || 
+      paket.includes("Group Package 2") || 
+      paket.includes("Group Package 3") || 
+      paket.includes("Gold") || 
+      paket.includes("Premium")
+    ) {
       durasiMenit = 90;
-    } else {
-      durasiMenit = 60;
     }
 
     const durasiMilidetik = durasiMenit * 60 * 1000;
-    const rawDate = item.tanggal.split('T')[0];
-    const timePart = item.jam?.substring(0, 5) || "09:00";
+    const rawDate = item.tanggal?.split('T')[0];
+    if (!rawDate) {
+      setAlertModal({ isOpen: true, message: "Tanggal jadwal belum diatur!" });
+      return;
+    }
 
+    const timePart = item.jam?.substring(0, 5) || "09:00";
     const startDateTime = new Date(`${rawDate}T${timePart}:00`).toISOString();
     const endDateTime = new Date(new Date(`${rawDate}T${timePart}:00`).getTime() + durasiMilidetik).toISOString();
 
@@ -125,7 +142,6 @@ export default function JadwalManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item: { ...item, startTime: startDateTime, endTime: endDateTime }, detail, accessToken }),
       });
-
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -138,15 +154,14 @@ export default function JadwalManager() {
         }
         
         await fetchAllData();
-
         const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
         const updatedDetail = detail ? { ...detail, calendar_synced: true, calendar_event_id: eventIdVal } : null;
+        
         setDetailModalConfig((prev: any) => ({
           ...prev,
           item: updatedItem,
           detail: updatedDetail
         }));
-
         setAlertModal({ isOpen: true, message: `Jadwal berhasil diset ke kalender dengan durasi ${durasiMenit} menit!` });
       } else {
         setAlertModal({ isOpen: true, message: "Gagal sync ke kalender: " + (result.details || result.error || "Terjadi kesalahan server") });
@@ -160,35 +175,32 @@ export default function JadwalManager() {
 
   const updateStatus = async (id: string, field: string, value: any) => {
     const item = jadwal.find(j => j.id === id);
-    
     const { error: jadwalError } = await supabase.from('jadwal').update({ [field]: value }).eq('id', id);
 
     if (!jadwalError) {
       if (field === 'payment_status' && item?.booking_id) {
         await supabase.from('Booking').update({ status: value }).eq('id', item.booking_id);
       }
-
-      if (field === 'payment_status' && value === 'LUNAS') {
-        if (item) {
-          await supabase.from('clients').update({ is_done: true }).eq('name', item.nama_klien);
-        }
+      if (field === 'payment_status' && value === 'LUNAS' && item?.nama_klien) {
+        await supabase.from('clients').update({ is_done: true }).eq('name', item.nama_klien);
       }
-
+      
       await fetchAllData();
       
-      setTimeout(async () => {
-        const { data: latestJadwal } = await supabase.from('jadwal').select('*');
-        const { data: latestBookings } = await supabase.from('Booking').select('*');
-        
-        if (detailModalConfig.isOpen && item && latestJadwal && latestBookings) {
-          const updatedItem = latestJadwal.find(j => j.id === id);
-          const updatedDetail = latestBookings.find(b => b.id === item.booking_id);
-          if (updatedItem && updatedDetail) {
-            setDetailModalConfig((prev: any) => ({ ...prev, item: updatedItem, detail: updatedDetail }));
-          }
+      if (detailModalConfig.isOpen && item) {
+        const { data: latestJadwal } = await supabase.from('jadwal').select('*').eq('id', id).single();
+        const { data: latestBooking } = item.booking_id 
+          ? await supabase.from('Booking').select('*').eq('id', item.booking_id).single()
+          : { data: null };
+
+        if (latestJadwal) {
+          setDetailModalConfig((prev: any) => ({
+            ...prev,
+            item: latestJadwal,
+            detail: latestBooking || prev.detail
+          }));
         }
-      }, 100);
-      
+      }
       setModalConfig({ ...modalConfig, isOpen: false });
     } else {
       setAlertModal({ isOpen: true, message: "Gagal menyimpan ke database: " + jadwalError.message });
@@ -234,17 +246,13 @@ export default function JadwalManager() {
     });
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   
-  // Perbaikan logika pengecekan sync agar lebih akurat mendeteksi status true/false dari database
   const isModalCalendarSynced = Boolean(
     currentModalItem?.calendar_synced === true || 
-    currentModalItem?.calendar_event_id === true ||
     (currentModalItem?.calendar_event_id && currentModalItem?.calendar_event_id !== '' && currentModalItem?.calendar_event_id !== 'false') ||
     currentBookingDetail?.calendar_synced === true || 
-    currentBookingDetail?.calendar_event_id === true ||
     (currentBookingDetail?.calendar_event_id && currentBookingDetail?.calendar_event_id !== '' && currentBookingDetail?.calendar_event_id !== 'false')
   );
 
@@ -269,7 +277,7 @@ export default function JadwalManager() {
           </select>
         </div>
       </div>
-
+      
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1200px] text-left border-collapse text-sm sm:text-base">
           <thead>
@@ -297,10 +305,8 @@ export default function JadwalManager() {
               
               const isRowCalendarSynced = Boolean(
                 item?.calendar_synced === true || 
-                item?.calendar_event_id === true ||
                 (item?.calendar_event_id && item?.calendar_event_id !== '' && item?.calendar_event_id !== 'false') ||
                 detail?.calendar_synced === true || 
-                detail?.calendar_event_id === true ||
                 (detail?.calendar_event_id && detail?.calendar_event_id !== '' && detail?.calendar_event_id !== 'false')
               );
 
@@ -313,30 +319,24 @@ export default function JadwalManager() {
                     )}
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 relative">
-                    <div className="flex items-center gap-1.5">
-                      <input 
-                        type="text" 
-                        value={item.nama_fg || ''}
-                        placeholder="Belum diset"
-                        onChange={(e) => { const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); setJadwal(updatedJadwal); }}
-                        onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
-                        className={`border rounded-lg px-2 py-1 text-xs w-28 focus:ring-1 focus:ring-indigo-500 outline-none ${
-                          isFgEmpty ? 'bg-amber-50 border-amber-300 text-amber-900 placeholder-amber-400 font-semibold' : 'bg-slate-50 border-slate-200'
-                        }`}
-                      />
-                    </div>
+                    <input 
+                      type="text" 
+                      value={item.nama_fg || ''}
+                      placeholder="Belum diset"
+                      onChange={(e) => { 
+                        const updatedJadwal = jadwal.map(j => j.id === item.id ? { ...j, nama_fg: e.target.value } : j); 
+                        setJadwal(updatedJadwal); 
+                      }}
+                      onBlur={(e) => setModalConfig({ isOpen: true, type: 'FG', id: item.id, value: e.target.value, field: 'nama_fg' })}
+                      className={`border rounded-lg px-2 py-1 text-xs w-28 focus:ring-1 focus:ring-indigo-500 outline-none ${
+                        isFgEmpty ? 'bg-amber-50 border-amber-300 text-amber-900 placeholder-amber-400 font-semibold' : 'bg-slate-50 border-slate-200'
+                      }`}
+                    />
                   </td>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 text-sm font-medium text-slate-900">
                     {isScheduleEmptyRow ? (
                       <button
-                        onClick={() => {
-                          setSelectedBooking({
-                            id: detail.id,
-                            booking_id: item.booking_id,
-                            tanggal_foto: item.tanggal,
-                            jam_foto: item.jam
-                          });
-                        }}
+                        onClick={() => setSelectedBooking({ id: detail.id, booking_id: item.booking_id, tanggal_foto: item.tanggal, jam_foto: item.jam })}
                         className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-2.5 py-1 rounded-md transition shadow-sm"
                       >
                         Set Jadwal
@@ -413,46 +413,29 @@ export default function JadwalManager() {
       {detailModalConfig.isOpen && currentModalItem && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 flex justify-between items-start z-10">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">{currentModalItem.nama_klien}</h2>
                 <p className="text-xs text-slate-500 mt-1">Detail Jadwal & Booking</p>
               </div>
               <button onClick={() => setDetailModalConfig({ ...detailModalConfig, isOpen: false })} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
             </div>
-
+            
             <div className="border-b border-slate-100 px-6">
               <div className="flex gap-6">
-                <button
-                  onClick={() => setDetailModalConfig({ ...detailModalConfig, activeTab: 'details' })}
-                  className={`py-4 text-sm font-medium border-b-2 transition ${
-                    detailModalConfig.activeTab === 'details'
-                      ? 'text-slate-900 border-slate-900'
-                      : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
-                >
-                  Detail
-                </button>
-                <button
-                  onClick={() => setDetailModalConfig({ ...detailModalConfig, activeTab: 'payment' })}
-                  className={`py-4 text-sm font-medium border-b-2 transition ${
-                    detailModalConfig.activeTab === 'payment'
-                      ? 'text-slate-900 border-slate-900'
-                      : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
-                >
-                  Pembayaran
-                </button>
-                <button
-                  onClick={() => setDetailModalConfig({ ...detailModalConfig, activeTab: 'chat' })}
-                  className={`py-4 text-sm font-medium border-b-2 transition ${
-                    detailModalConfig.activeTab === 'chat'
-                      ? 'text-slate-900 border-slate-900'
-                      : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
-                >
-                  Chat
-                </button>
+                {['details', 'payment', 'chat'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setDetailModalConfig({ ...detailModalConfig, activeTab: tab })}
+                    className={`py-4 text-sm font-medium border-b-2 transition capitalize ${
+                      detailModalConfig.activeTab === tab
+                        ? 'text-slate-900 border-slate-900'
+                        : 'text-slate-500 border-transparent hover:text-slate-700'
+                    }`}
+                  >
+                    {tab === 'details' ? 'Detail' : tab === 'payment' ? 'Pembayaran' : 'Chat'}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -471,14 +454,10 @@ export default function JadwalManager() {
                       disabled={isCalendarLoading}
                       className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow-sm"
                     >
-                      {isCalendarLoading ? (
-                        <span>Sedang Sync...</span>
-                      ) : (
-                        <span>{isModalCalendarSynced ? '🔄 Sync Ulang Kalender' : '📅 Sync ke Kalender'}</span>
-                      )}
+                      {isCalendarLoading ? 'Sedang Sync...' : (isModalCalendarSynced ? '🔄 Sync Ulang Kalender' : '📅 Sync ke Kalender')}
                     </button>
                   </div>
-
+                  
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Kampus</p>
@@ -489,16 +468,12 @@ export default function JadwalManager() {
                       <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.lokasi || '-'}</p>
                     </div>
                   </div>
-
                   <div className="h-px bg-slate-100"></div>
-
                   <div>
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Paket</p>
                     <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.paket || '-'}</p>
                   </div>
-
                   <div className="h-px bg-slate-100"></div>
-
                   <div className="grid grid-cols-3 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">MUA</p>
@@ -513,9 +488,7 @@ export default function JadwalManager() {
                       <p className="text-sm text-slate-900 font-medium mt-2">{detailModalConfig.detail?.instagram_tiktok || '-'}</p>
                     </div>
                   </div>
-
                   <div className="h-px bg-slate-100"></div>
-
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">WhatsApp</p>
@@ -526,9 +499,7 @@ export default function JadwalManager() {
                       <p className="text-sm text-slate-900 font-medium mt-2">{currentModalItem.nama_fg || '-'}</p>
                     </div>
                   </div>
-
                   <div className="h-px bg-slate-100"></div>
-
                   <div>
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Fee Freelance</p>
                     <input
@@ -546,9 +517,7 @@ export default function JadwalManager() {
                     />
                     <p className="text-xs text-slate-500 mt-2">Rp {Number(detailModalConfig.detail?.freelance_fee || 0).toLocaleString('id-ID')}</p>
                   </div>
-
                   <div className="h-px bg-slate-100"></div>
-
                   <div>
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Status Foto</p>
                     <select
@@ -586,7 +555,6 @@ export default function JadwalManager() {
                       <p className="text-lg font-semibold text-slate-900 mt-3">Rp {(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}</p>
                     </div>
                   </div>
-
                   <div className="border border-slate-200 rounded-lg p-4">
                     <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-3">Status</p>
                     <div className="flex items-center gap-2">
@@ -602,20 +570,15 @@ export default function JadwalManager() {
                       )}
                     </div>
                   </div>
-
                   <div className="space-y-3">
                     <button
-                      onClick={() => {
-                        updateStatus(currentModalItem.id, 'payment_status', 'DP');
-                      }}
+                      onClick={() => updateStatus(currentModalItem.id, 'payment_status', 'DP')}
                       className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
                     >
                       Set DP
                     </button>
                     <button
-                      onClick={() => {
-                        updateStatus(currentModalItem.id, 'payment_status', 'LUNAS');
-                      }}
+                      onClick={() => updateStatus(currentModalItem.id, 'payment_status', 'LUNAS')}
                       className="w-full bg-slate-900 hover:bg-black text-white font-medium py-2.5 rounded-lg transition text-sm"
                     >
                       Set LUNAS
@@ -629,51 +592,39 @@ export default function JadwalManager() {
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-xs text-slate-600 max-h-96 overflow-y-auto font-mono">
                     {`Halo Kak ${currentModalItem.nama_klien} 😊
 Mengingatkan untuk jadwal photoshoot ya 📸✨
-
 🗓 Tanggal : ${currentModalItem.tanggal ? new Date(currentModalItem.tanggal).toLocaleDateString('id-ID') : 'Belum diset'}
 ⏰ Jam : ${currentModalItem.jam?.substring(0, 5) || 'Belum diset'}
 📍 Lokasi : ${detailModalConfig.detail?.lokasi || '-'}
 🏫 Kampus : ${detailModalConfig.detail?.kampus || '-'}
 📌 Paket : ${detailModalConfig.detail?.paket || '-'}
 📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}
-
 Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
 📌 DP : Rp ${(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}
 📌 Sisa pembayaran : Rp ${(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}
-
 💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
-
 Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
 📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${currentModalItem.nama_klien} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
-
 Terima kasih, sampai jumpa di hari H ✨📸🎓`}
                   </div>
-
                   <button
                     onClick={() => {
                       const tglStr = currentModalItem.tanggal ? new Date(currentModalItem.tanggal).toLocaleDateString('id-ID') : 'Belum diset';
                       const jamStr = currentModalItem.jam?.substring(0, 5) || 'Belum diset';
                       const text = `Halo Kak ${currentModalItem.nama_klien} 😊
 Mengingatkan untuk jadwal photoshoot ya 📸✨
-
 🗓 Tanggal : ${tglStr}
 ⏰ Jam : ${jamStr}
 📍 Lokasi : ${detailModalConfig.detail?.lokasi || '-'}
 🏫 Kampus : ${detailModalConfig.detail?.kampus || '-'}
 📌 Paket : ${detailModalConfig.detail?.paket || '-'}
 📞 WhatsApp : ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'}
-
 Untuk pelunasan bisa dilakukan sebelum sesi dimulai ya Kak 🙏
 📌 DP : Rp ${(detailModalConfig.detail?.dp_amount || 0).toLocaleString()}
 📌 Sisa pembayaran : Rp ${(detailModalConfig.detail?.remaining_balance || 0).toLocaleString()}
-
 💳 Pembayaran via QRIS (scan seperti saat DP ya Kak)
-
 Setelah melakukan pelunasan, mohon kirimkan bukti transfernya ya 😊
 📩 Nanti untuk teknis di lapangan, fotografer (FG) kami akan menghubungi Kak ${currentModalItem.nama_klien} di nomor ${detailModalConfig.detail?.whatsapp || 'Tidak tersedia'} sebelum sesi dimulai ya.
-
 Terima kasih, sampai jumpa di hari H ✨📸🎓`;
-
                       navigator.clipboard.writeText(text);
                       setAlertModal({ isOpen: true, message: "Pesan WhatsApp berhasil disalin!" });
                     }}
