@@ -45,6 +45,7 @@ export default function JadwalManager() {
     fetchAllData(); 
   }, [fetchAllData]);
 
+  // Sinkronisasi data real-time saat modal detail terbuka
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
@@ -143,18 +144,26 @@ export default function JadwalManager() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        const eventIdVal = result.eventId || 'synced';
+        const eventIdVal = result.eventId || 'synced_true';
         
-        // Update database Supabase secara eksplisit
+        // Update database Supabase secara paralel
+        const updatePromises = [];
         if (detail?.id) {
-          await supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', detail.id);
+          updatePromises.push(
+            supabase.from('Booking').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', detail.id)
+          );
         }
         if (item?.id) {
-          await supabase.from('jadwal').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', item.id);
+          updatePromises.push(
+            supabase.from('jadwal').update({ calendar_synced: true, calendar_event_id: eventIdVal }).eq('id', item.id)
+          );
         }
+        await Promise.all(updatePromises);
         
+        // Ambil data terbaru langsung dari database agar state sinkron
         await fetchAllData();
         
+        // Update state lokal secara instan pada modal yang sedang aktif
         const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
         const updatedDetail = detail ? { ...detail, calendar_synced: true, calendar_event_id: eventIdVal } : null;
         
@@ -248,15 +257,21 @@ export default function JadwalManager() {
     });
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  
+  // Ambil data terbaru dari state utama atau fallback ke state modal
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   
-  // LOGIKA PEMERIKSAAN SYNC YANG DIPERBAIKI SECARA KETAT
+  // LOGIKA PEMERIKSAAN SYNC YANG KUAT (MENANGANI BOOLEAN, STRING, MAUPUN TRUTHY VALUE)
   const checkIsSynced = (targetItem: any, targetDetail: any) => {
-    const itemSynced = targetItem?.calendar_synced === true || targetItem?.calendar_synced === 'true' || 
-                       (targetItem?.calendar_event_id && targetItem?.calendar_event_id !== '' && targetItem?.calendar_event_id !== 'false');
-    const detailSynced = targetDetail?.calendar_synced === true || targetDetail?.calendar_synced === 'true' || 
-                         (targetDetail?.calendar_event_id && targetDetail?.calendar_event_id !== '' && targetDetail?.calendar_event_id !== 'false');
+    const itemSynced = targetItem?.calendar_synced === true || 
+                       targetItem?.calendar_synced === 'true' || 
+                       (targetItem?.calendar_event_id && targetItem?.calendar_event_id !== '' && targetItem?.calendar_event_id !== 'false' && targetItem?.calendar_event_id !== null);
+    
+    const detailSynced = targetDetail?.calendar_synced === true || 
+                         targetDetail?.calendar_synced === 'true' || 
+                         (targetDetail?.calendar_event_id && targetDetail?.calendar_event_id !== '' && targetDetail?.calendar_event_id !== 'false' && targetDetail?.calendar_event_id !== null);
+    
     return Boolean(itemSynced || detailSynced);
   };
 
