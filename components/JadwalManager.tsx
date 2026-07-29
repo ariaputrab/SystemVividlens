@@ -451,12 +451,15 @@ export default function JadwalManager() {
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <button
-                        onClick={() => setSelectedBooking({ 
-                          id: currentBookingDetail?.id, 
-                          booking_id: currentModalItem.id, 
-                          tanggal_foto: currentModalItem.tanggal, 
-                          jam_foto: currentModalItem.jam 
-                        })}
+                        onClick={() => {
+                          setDetailModalConfig((prev: any) => ({ ...prev, isOpen: false }));
+                          setSelectedBooking({ 
+                            id: currentBookingDetail?.id, 
+                            booking_id: currentModalItem.id, 
+                            tanggal_foto: currentModalItem.tanggal, 
+                            jam_foto: currentModalItem.jam 
+                          });
+                        }}
                         className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm"
                       >
                         📅 Reschedule
