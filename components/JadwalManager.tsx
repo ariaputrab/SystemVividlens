@@ -43,7 +43,6 @@ export default function JadwalManager() {
     fetchAllData(); 
   }, [fetchAllData]);
 
-  // Sinkronisasi data real-time saat modal detail terbuka
   useEffect(() => {
     if (detailModalConfig.isOpen && detailModalConfig.item) {
       const refreshDetailData = async () => {
@@ -169,45 +168,6 @@ export default function JadwalManager() {
       }
     } catch (err) {
       setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
-    } finally {
-      setIsCalendarLoading(false);
-    }
-  };
-
-  // --- FITUR RESCHEDULE YANG DITAMBAHKAN ---
-  const handleReschedule = async (bookingId: any, newStart: string, newEnd: string) => {
-    if (status !== "authenticated") {
-      setAlertModal({ isOpen: true, message: "Sesi tidak ditemukan atau belum login." });
-      return;
-    }
-    const accessToken = (session as any)?.accessToken;
-    if (!accessToken) {
-      setAlertModal({ isOpen: true, message: "Token akses kalender tidak ditemukan." });
-      return;
-    }
-
-    try {
-      setIsCalendarLoading(true);
-      const response = await fetch('/api/calendar/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'reschedule',
-          booking_id: bookingId,
-          new_start: newStart,
-          new_end: newEnd,
-          accessToken,
-        }),
-      });
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setAlertModal({ isOpen: true, message: "Jadwal dan Google Calendar berhasil di-reschedule!" });
-        await fetchAllData();
-      } else {
-        setAlertModal({ isOpen: true, message: "Gagal reschedule: " + (result.details || result.error) });
-      }
-    } catch (err) {
-      setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender." });
     } finally {
       setIsCalendarLoading(false);
     }
@@ -489,20 +449,33 @@ export default function JadwalManager() {
             <div className="p-6">
               {detailModalConfig.activeTab === 'details' && (
                 <div className="space-y-5">
-                  <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-4 rounded-xl border border-slate-200 gap-3">
                     <div>
                       <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Google Calendar Sync</p>
                       <p className="text-sm font-semibold text-slate-800 mt-1">
                         {isModalCalendarSynced ? '✅ Sudah masuk Google Calendar' : '⚠️ Belum disinkronkan'}
                       </p>
                     </div>
-                    <button
-                      onClick={() => syncToGoogle(currentModalItem, currentBookingDetail)}
-                      disabled={isCalendarLoading}
-                      className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center gap-2 shadow-sm"
-                    >
-                      {isCalendarLoading ? 'Sedang Sync...' : (isModalCalendarSynced ? '🔄 Sync Ulang Kalender' : '📅 Sync ke Kalender')}
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        onClick={() => setSelectedBooking({ 
+                          id: currentBookingDetail?.id, 
+                          booking_id: currentModalItem.id, 
+                          tanggal_foto: currentModalItem.tanggal, 
+                          jam_foto: currentModalItem.jam 
+                        })}
+                        className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        📅 Reschedule
+                      </button>
+                      <button
+                        onClick={() => syncToGoogle(currentModalItem, currentBookingDetail)}
+                        disabled={isCalendarLoading}
+                        className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        {isCalendarLoading ? 'Sedang Sync...' : (isModalCalendarSynced ? '🔄 Sync Ulang' : '📅 Sync Kalender')}
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-6">
