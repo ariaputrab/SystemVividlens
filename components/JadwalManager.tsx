@@ -32,7 +32,7 @@ export default function JadwalManager() {
         console.error("Gagal mengambil data:", errJadwal?.message || errBooking?.message);
         return;
       }
-      setJadwal(dataJadwal || []);
+      set(data || []);
       setBookings(dataBooking || []);
     } catch (err) {
       console.error("Kesalahan jaringan saat fetch data:", err);
@@ -53,15 +53,15 @@ export default function JadwalManager() {
           .eq('id', detailModalConfig.item.booking_id)
           .single();
         
-        const { data: latestJadwalItem } = await supabase
-          .from('jadwal')
+        const { data: latestItem } = await supabase
+          .from('')
           .select('*')
           .eq('id', detailModalConfig.item.id)
           .single();
-        if (latestBooking || latestJadwalItem) {
+        if (latestBooking || latestItem) {
           setDetailModalConfig((prev: any) => ({
             ...prev,
-            item: latestJadwalItem || prev.item,
+            item: latestItem || prev.item,
             detail: latestBooking || prev.detail
           }));
         }
@@ -109,6 +109,7 @@ export default function JadwalManager() {
       durasiMenit = 30;
     } else if (
       paket.includes("90") || 
+      paket.includes("Plaosan B 2") || 
       paket.includes("Group Package 2") || 
       paket.includes("Group Package 3") || 
       paket.includes("Gold") || 
@@ -119,7 +120,7 @@ export default function JadwalManager() {
     const durasiMilidetik = durasiMenit * 60 * 1000;
     const rawDate = item.tanggal?.split('T')[0];
     if (!rawDate) {
-      setAlertModal({ isOpen: true, message: "Tanggal jadwal belum diatur!" });
+      setAlertModal({ isOpen: true, message: "Tanggal  belum diatur!" });
       return;
     }
     const timePart = item.jam?.substring(0, 5) || "09:00";
