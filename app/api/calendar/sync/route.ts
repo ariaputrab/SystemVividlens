@@ -21,6 +21,31 @@ export async function POST(req: NextRequest) {
     const targetBookingId = booking_id || item?.booking_id || detail?.id;
     const targetJadwalId = item?.id;
 
+    // Tentukan durasi berdasarkan paket
+    const paket = detail?.paket || "";
+    let durasiMenit = 60;
+    if (paket.includes("30")) {
+      durasiMenit = 30;
+    } else if (
+      paket.includes("90") || 
+      paket.includes("Plaosan B") || 
+      paket.includes("Group Package 2") || 
+      paket.includes("Group Package 3") || 
+      paket.includes("Gold") || 
+      paket.includes("Premium")
+    ) {
+      durasiMenit = 90;
+    }
+
+    // Helper untuk menghitung waktu selesai (end time) otomatis jika item.startTime ada tapi item.endTime tidak pas
+    const startTimeStr = item?.startTime;
+    let endTimeStr = item?.endTime;
+    if (startTimeStr) {
+      const startObj = new Date(startTimeStr);
+      const endObj = new Date(startObj.getTime() + durasiMenit * 60 * 1000);
+      endTimeStr = endObj.toISOString();
+    }
+
     if (action === 'reschedule') {
       const { data: booking } = await supabase
         .from('Booking')
@@ -50,8 +75,8 @@ export async function POST(req: NextRequest) {
 
     const existingEventsRes = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: new Date(new Date(item.startTime).getTime() - 2 * 60 * 60 * 1000).toISOString(),
-      timeMax: new Date(new Date(item.endTime).getTime() + 2 * 60 * 60 * 1000).toISOString(),
+      timeMin: new Date(new Date(startTimeStr).getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      timeMax: new Date(new Date(endTimeStr).getTime() + 2 * 60 * 60 * 1000).toISOString(),
       singleEvents: true,
     });
 
@@ -69,8 +94,8 @@ export async function POST(req: NextRequest) {
         requestBody: {
           summary: eventSummary,
           description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
-          start: { dateTime: item.startTime },
-          end: { dateTime: item.endTime },
+          start: { dateTime: startTimeStr },
+          end: { dateTime: endTimeStr },
         },
       } as any);
       finalEventId = matchedEvent.id;
@@ -81,8 +106,8 @@ export async function POST(req: NextRequest) {
         requestBody: {
           summary: eventSummary,
           description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
-          start: { dateTime: item.startTime },
-          end: { dateTime: item.endTime },
+          start: { dateTime: startTimeStr },
+          end: { dateTime: endTimeStr },
         },
       } as any);
       finalEventId = res.data.id;
