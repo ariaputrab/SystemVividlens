@@ -32,7 +32,7 @@ export default function JadwalManager() {
         console.error("Gagal mengambil data:", errJadwal?.message || errBooking?.message);
         return;
       }
-      ssetJadwal(dataJadwal || []);
+      setJadwal(dataJadwal || []);
       setBookings(dataBooking || []);
     } catch (err) {
       console.error("Kesalahan jaringan saat fetch data:", err);
