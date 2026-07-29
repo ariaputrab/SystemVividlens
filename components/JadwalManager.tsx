@@ -28,12 +28,10 @@ export default function JadwalManager() {
         supabase.from('jadwal').select('*'),
         supabase.from('Booking').select('*')
       ]);
-
       if (errJadwal || errBooking) {
         console.error("Gagal mengambil data:", errJadwal?.message || errBooking?.message);
         return;
       }
-
       setJadwal(dataJadwal || []);
       setBookings(dataBooking || []);
     } catch (err) {
@@ -60,7 +58,6 @@ export default function JadwalManager() {
           .select('*')
           .eq('id', detailModalConfig.item.id)
           .single();
-
         if (latestBooking || latestJadwalItem) {
           setDetailModalConfig((prev: any) => ({
             ...prev,
@@ -77,13 +74,11 @@ export default function JadwalManager() {
     if (!bookingId) return;
     const cleanValue = value === '' ? null : value;
     const payload = { [field]: cleanValue };
-
     const { error } = await supabase.from('Booking').update(payload).eq('id', bookingId);
     if (error) {
       setAlertModal({ isOpen: true, message: `Gagal menyimpan ${field.replace(/_/g, ' ')}: ${error.message}` });
       return;
     }
-
     setBookings((prev) => prev.map(b => b.id === bookingId ? { ...b, [field]: cleanValue } : b));
     if (detailModalConfig.detail?.id === bookingId) {
       setDetailModalConfig((prev: any) => ({
@@ -108,7 +103,6 @@ export default function JadwalManager() {
       setAlertModal({ isOpen: true, message: "Token akses kalender tidak ditemukan. Silakan login ulang dengan akses kalender." });
       return;
     }
-
     const paket = detail?.paket || "";
     let durasiMenit = 60;
     if (paket.includes("30")) {
@@ -122,18 +116,15 @@ export default function JadwalManager() {
     ) {
       durasiMenit = 90;
     }
-
     const durasiMilidetik = durasiMenit * 60 * 1000;
     const rawDate = item.tanggal?.split('T')[0];
     if (!rawDate) {
       setAlertModal({ isOpen: true, message: "Tanggal jadwal belum diatur!" });
       return;
     }
-
     const timePart = item.jam?.substring(0, 5) || "09:00";
     const startDateTime = new Date(`${rawDate}T${timePart}:00`).toISOString();
     const endDateTime = new Date(new Date(`${rawDate}T${timePart}:00`).getTime() + durasiMilidetik).toISOString();
-
     try {
       setIsCalendarLoading(true);
       const response = await fetch('/api/calendar/sync', {
@@ -142,11 +133,9 @@ export default function JadwalManager() {
         body: JSON.stringify({ item: { ...item, startTime: startDateTime, endTime: endDateTime }, detail, accessToken }),
       });
       const result = await response.json();
-
       if (response.ok && result.success) {
         const eventIdVal = result.eventId || 'synced_true';
         
-        // Update database Supabase secara paralel
         const updatePromises = [];
         if (detail?.id) {
           updatePromises.push(
@@ -160,10 +149,8 @@ export default function JadwalManager() {
         }
         await Promise.all(updatePromises);
         
-        // Ambil data terbaru langsung dari database agar state sinkron
         await fetchAllData();
         
-        // Update state lokal secara instan pada modal yang sedang aktif
         const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
         const updatedDetail = detail ? { ...detail, calendar_synced: true, calendar_event_id: eventIdVal } : null;
         
@@ -187,7 +174,6 @@ export default function JadwalManager() {
   const updateStatus = async (id: string, field: string, value: any) => {
     const item = jadwal.find(j => j.id === id);
     const { error: jadwalError } = await supabase.from('jadwal').update({ [field]: value }).eq('id', id);
-
     if (!jadwalError) {
       if (field === 'payment_status' && item?.booking_id) {
         await supabase.from('Booking').update({ status: value }).eq('id', item.booking_id);
@@ -203,7 +189,6 @@ export default function JadwalManager() {
         const { data: latestBooking } = item.booking_id 
           ? await supabase.from('Booking').select('*').eq('id', item.booking_id).single()
           : { data: null };
-
         if (latestJadwal) {
           setDetailModalConfig((prev: any) => ({
             ...prev,
@@ -258,11 +243,9 @@ export default function JadwalManager() {
 
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   
-  // Ambil data terbaru dari state utama atau fallback ke state modal
   const currentModalItem = jadwal.find(j => j.id === detailModalConfig.item?.id) || detailModalConfig.item;
   const currentBookingDetail = bookings.find(b => b.id === currentModalItem?.booking_id) || detailModalConfig.detail;
   
-  // LOGIKA PEMERIKSAAN SYNC YANG KUAT (MENANGANI BOOLEAN, STRING, MAUPUN TRUTHY VALUE)
   const checkIsSynced = (targetItem: any, targetDetail: any) => {
     const itemSynced = targetItem?.calendar_synced === true || 
                        targetItem?.calendar_synced === 'true' || 
