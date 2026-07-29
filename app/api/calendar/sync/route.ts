@@ -40,20 +40,18 @@ export async function POST(req: NextRequest) {
           start: { dateTime: new_start },
           end: { dateTime: new_end }
         },
-      });
+      } as any);
 
       return NextResponse.json({ success: true, message: "Kalender berhasil diperbarui" });
     }
 
-    // 1. CARI APAKAH EVENT DENGAN NAMA & TANGGAL TERSEBUT SUDAH ADA DI GOOGLE CALENDAR (MENCEGAH DOUBLE & OTOMATIS DETEKSI)
+    // 1. CARI APAKAH EVENT DENGAN NAMA & TANGGAL TERSEBUT SUDAH ADA DI GOOGLE CALENDAR
     const eventSummary = `Foto: ${item.nama_klien}`;
-    const timeMin = new Date(item.startTime).toISOString();
-    const timeMax = new Date(item.endTime).toISOString();
 
     const existingEventsRes = await calendar.events.list({
       calendarId: 'primary',
-      timeMin: new Date(new Date(item.startTime).getTime() - 2 * 60 * 60 * 1000).toISOString(), // rentang 2 jam sebelumnya
-      timeMax: new Date(new Date(item.endTime).getTime() + 2 * 60 * 60 * 1000).toISOString(),   // rentang 2 jam sesudahnya
+      timeMin: new Date(new Date(item.startTime).getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      timeMax: new Date(new Date(item.endTime).getTime() + 2 * 60 * 60 * 1000).toISOString(),
       singleEvents: true,
     });
 
@@ -63,8 +61,8 @@ export async function POST(req: NextRequest) {
 
     let finalEventId = matchedEvent?.id || item?.google_event_id || item?.calendar_event_id;
 
-    if (matchedEvent) {
-      // Jika sudah ada di Google Calendar, cukup update (patch) agar jam/tanggalnya akurat tanpa bikin baru
+    if (matchedEvent && matchedEvent.id) {
+      // Jika sudah ada di Google Calendar, gunakan patch
       await calendar.events.patch({
         calendarId: 'primary',
         eventId: matchedEvent.id,
@@ -74,10 +72,10 @@ export async function POST(req: NextRequest) {
           start: { dateTime: item.startTime },
           end: { dateTime: item.endTime },
         },
-      });
+      } as any);
       finalEventId = matchedEvent.id;
     } else {
-      // Jika benar-benar belum ada di kalender, buat baru
+      // Jika belum ada, buat baru via insert
       const res = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
@@ -86,7 +84,7 @@ export async function POST(req: NextRequest) {
           start: { dateTime: item.startTime },
           end: { dateTime: item.endTime },
         },
-      });
+      } as any);
       finalEventId = res.data.id;
     }
 
