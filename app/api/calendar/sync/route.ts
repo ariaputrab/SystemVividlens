@@ -21,23 +21,24 @@ export async function POST(req: NextRequest) {
     const targetBookingId = booking_id || item?.booking_id || detail?.id;
     const targetJadwalId = item?.id;
 
-    // Tentukan durasi berdasarkan paket
-    const paket = detail?.paket || "";
+    // Tentukan durasi berdasarkan paket (dicek dari detail maupun item untuk mencegah undefined)
+    const teksPaket = `${detail?.paket || ""} ${item?.paket || ""}`;
     let durasiMenit = 60;
-    if (paket.includes("30")) {
+
+    if (teksPaket.includes("30")) {
       durasiMenit = 30;
     } else if (
-      paket.includes("90") || 
-      paket.includes("Plaosan B") || 
-      paket.includes("Group Package 2") || 
-      paket.includes("Group Package 3") || 
-      paket.includes("Gold") || 
-      paket.includes("Premium")
+      teksPaket.includes("90") || 
+      teksPaket.includes("Plaosan B") || 
+      teksPaket.includes("Group Package 2") || 
+      teksPaket.includes("Group Package 3") || 
+      teksPaket.includes("Gold") || 
+      teksPaket.includes("Premium")
     ) {
       durasiMenit = 90;
     }
 
-    // Helper untuk menghitung waktu selesai (end time) otomatis jika item.startTime ada tapi item.endTime tidak pas
+    // Helper untuk menghitung waktu selesai (end time) otomatis
     const startTimeStr = item?.startTime;
     let endTimeStr = item?.endTime;
     if (startTimeStr) {
@@ -87,25 +88,25 @@ export async function POST(req: NextRequest) {
     let finalEventId = matchedEvent?.id || item?.google_event_id || item?.calendar_event_id;
 
     if (matchedEvent && matchedEvent.id) {
-      // Jika sudah ada di Google Calendar, gunakan patch
+      // Jika sudah ada di Google Calendar, gunakan patch dan update waktunya sesuai durasi baru
       await calendar.events.patch({
         calendarId: 'primary',
         eventId: matchedEvent.id,
         requestBody: {
           summary: eventSummary,
-          description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
+          description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || item?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
           start: { dateTime: startTimeStr },
           end: { dateTime: endTimeStr },
         },
       } as any);
       finalEventId = matchedEvent.id;
     } else {
-      // Jika belum ada, buat baru via insert
+      // Jika belum ada, buat baru via insert dengan durasi yang sudah disesuaikan
       const res = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
           summary: eventSummary,
-          description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
+          description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || item?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
           start: { dateTime: startTimeStr },
           end: { dateTime: endTimeStr },
         },
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
     }
     await Promise.all(updatePromises);
 
-    return NextResponse.json({ success: true, eventId: finalEventId });
+    return NextResponse.json({ success: true, eventId: finalEventId, durasi: durasiMenit });
 
   } catch (error: any) {
     return NextResponse.json({ error: "Gagal memproses kalender", details: error.message }, { status: 500 });
