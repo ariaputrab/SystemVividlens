@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
     const targetBookingId = booking_id || item?.booking_id || detail?.id;
     const targetJadwalId = item?.id;
 
-    // 1. Aksi RESCHEDULE
     if (action === 'reschedule') {
       const { data: booking } = await supabase
         .from('Booking')
@@ -46,61 +45,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Kalender berhasil diperbarui" });
     }
 
-    // 2. CEK APAKAH SUDAH ADA EVENT ID DI DATABASE
-    let existingEventId = item?.google_event_id || item?.calendar_event_id;
+    // 1. CARI APAKAH EVENT DENGAN NAMA & TANGGAL TERSEBUT SUDAH ADA DI GOOGLE CALENDAR (MENCEGAH DOUBLE & OTOMATIS DETEKSI)
+    const eventSummary = `Foto: ${item.nama_klien}`;
+    const timeMin = new Date(item.startTime).toISOString();
+    const timeMax = new Date(item.endTime).toISOString();
 
-    if (!existingEventId && targetJadwalId) {
-      const { data: jData } = await supabase
-        .from('jadwal')
-        .select('google_event_id, calendar_event_id')
-        .eq('id', targetJadwalId)
-        .single();
-      existingEventId = jData?.google_event_id || jData?.calendar_event_id;
-    }
+    const existingEventsRes = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: new Date(new Date(item.startTime).getTime() - 2 * 60 * 60 * 1000).toISOString(), // rentang 2 jam sebelumnya
+      timeMax: new Date(new Date(item.endTime).getTime() + 2 * 60 * 60 * 1000).toISOString(),   // rentang 2 jam sesudahnya
+      singleEvents: true,
+    });
 
-    if (!existingEventId && targetBookingId) {
-      const { data: bData } = await supabase
-        .from('Booking')
-        .select('google_event_id, calendar_event_id')
-        .eq('id', targetBookingId)
-        .single();
-      existingEventId = bData?.google_event_id || bData?.calendar_event_id;
-    }
+    const matchedEvent = existingEventsRes.data.items?.find(ev => 
+      ev.summary === eventSummary || (ev.description && ev.description.includes(item.nama_klien))
+    );
 
-    let finalEventId = existingEventId;
+    let finalEventId = matchedEvent?.id || item?.google_event_id || item?.calendar_event_id;
 
-    if (existingEventId) {
-      // JIKA SUDAH ADA: Cukup PATCH (Update jam/tanggal), JANGAN INSERT LAGI BIAR TIDAK DOUBLE!
-      try {
-        await calendar.events.patch({
-          calendarId: 'primary',
-          eventId: existingEventId,
-          requestBody: {
-            summary: `Foto: ${item.nama_klien}`,
-            description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
-            start: { dateTime: item.startTime },
-            end: { dateTime: item.endTime },
-          },
-        });
-      } catch (err) {
-        // Kalau ternyata event aslinya sudah terhapus manual di Google Calendar, buat baru
-        const resNew = await calendar.events.insert({
-          calendarId: 'primary',
-          requestBody: {
-            summary: `Foto: ${item.nama_klien}`,
-            description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
-            start: { dateTime: item.startTime },
-            end: { dateTime: item.endTime },
-          },
-        });
-        finalEventId = resNew.data.id;
-      }
+    if (matchedEvent) {
+      // Jika sudah ada di Google Calendar, cukup update (patch) agar jam/tanggalnya akurat tanpa bikin baru
+      await calendar.events.patch({
+        calendarId: 'primary',
+        eventId: matchedEvent.id,
+        requestBody: {
+          summary: eventSummary,
+          description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
+          start: { dateTime: item.startTime },
+          end: { dateTime: item.endTime },
+        },
+      });
+      finalEventId = matchedEvent.id;
     } else {
-      // JIKA BELUM ADA SAMA SEKALI: Baru buat event baru (Insert)
+      // Jika benar-benar belum ada di kalender, buat baru
       const res = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
-          summary: `Foto: ${item.nama_klien}`,
+          summary: eventSummary,
           description: `Lokasi: ${detail?.lokasi || '-'}\nPaket: ${detail?.paket || '-'}\nFG: ${item.nama_fg || '-'}`,
           start: { dateTime: item.startTime },
           end: { dateTime: item.endTime },
@@ -109,7 +90,7 @@ export async function POST(req: NextRequest) {
       finalEventId = res.data.id;
     }
 
-    // Simpan status dan event ID ke database secara serentak
+    // Simpan status dan event ID otomatis ke database Supabase
     const updatePromises = [];
     if (targetBookingId) {
       updatePromises.push(
