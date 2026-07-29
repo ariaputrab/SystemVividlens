@@ -54,7 +54,7 @@ export default function JadwalManager() {
           .single();
         
         const { data: latestItem } = await supabase
-          .from('')
+          .from('jadwal')
           .select('*')
           .eq('id', detailModalConfig.item.id)
           .single();
@@ -103,6 +103,7 @@ export default function JadwalManager() {
       setAlertModal({ isOpen: true, message: "Token akses kalender tidak ditemukan. Silakan login ulang dengan akses kalender." });
       return;
     }
+
     const paket = detail?.paket || "";
     let durasiMenit = 60;
     if (paket.includes("30")) {
@@ -117,15 +118,17 @@ export default function JadwalManager() {
     ) {
       durasiMenit = 90;
     }
+
     const durasiMilidetik = durasiMenit * 60 * 1000;
     const rawDate = item.tanggal?.split('T')[0];
     if (!rawDate) {
-      setAlertModal({ isOpen: true, message: "Tanggal  belum diatur!" });
+      setAlertModal({ isOpen: true, message: "Tanggal belum diatur!" });
       return;
     }
     const timePart = item.jam?.substring(0, 5) || "09:00";
     const startDateTime = new Date(`${rawDate}T${timePart}:00`).toISOString();
     const endDateTime = new Date(new Date(`${rawDate}T${timePart}:00`).getTime() + durasiMilidetik).toISOString();
+
     try {
       setIsCalendarLoading(true);
       const response = await fetch('/api/calendar/sync', {
@@ -149,7 +152,6 @@ export default function JadwalManager() {
           );
         }
         await Promise.all(updatePromises);
-        
         await fetchAllData();
         
         const updatedItem = { ...item, calendar_synced: true, calendar_event_id: eventIdVal };
@@ -167,6 +169,45 @@ export default function JadwalManager() {
       }
     } catch (err) {
       setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender. Pastikan koneksi internet stabil." });
+    } finally {
+      setIsCalendarLoading(false);
+    }
+  };
+
+  // --- FITUR RESCHEDULE YANG DITAMBAHKAN ---
+  const handleReschedule = async (bookingId: any, newStart: string, newEnd: string) => {
+    if (status !== "authenticated") {
+      setAlertModal({ isOpen: true, message: "Sesi tidak ditemukan atau belum login." });
+      return;
+    }
+    const accessToken = (session as any)?.accessToken;
+    if (!accessToken) {
+      setAlertModal({ isOpen: true, message: "Token akses kalender tidak ditemukan." });
+      return;
+    }
+
+    try {
+      setIsCalendarLoading(true);
+      const response = await fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reschedule',
+          booking_id: bookingId,
+          new_start: newStart,
+          new_end: newEnd,
+          accessToken,
+        }),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setAlertModal({ isOpen: true, message: "Jadwal dan Google Calendar berhasil di-reschedule!" });
+        await fetchAllData();
+      } else {
+        setAlertModal({ isOpen: true, message: "Gagal reschedule: " + (result.details || result.error) });
+      }
+    } catch (err) {
+      setAlertModal({ isOpen: true, message: "Gagal koneksi ke server kalender." });
     } finally {
       setIsCalendarLoading(false);
     }
@@ -309,7 +350,6 @@ export default function JadwalManager() {
               const isScheduleEmptyRow = !item.tanggal;
               
               const isRowCalendarSynced = checkIsSynced(item, detail);
-
               return (
                 <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition ${item.is_done ? 'bg-green-50/30' : ''}`}>
                   <td className="px-3 py-2 sm:px-4 sm:py-3 font-semibold text-slate-900 cursor-pointer hover:text-indigo-600 flex items-center gap-2" onClick={() => setDetailModalConfig({ isOpen: true, item, detail, activeTab: 'details' })}>
@@ -344,6 +384,13 @@ export default function JadwalManager() {
                     ) : (
                       <div className="flex items-center gap-2">
                         {new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        <button
+                          onClick={() => setSelectedBooking({ id: detail.id, booking_id: item.id, tanggal_foto: item.tanggal, jam_foto: item.jam })}
+                          className="text-indigo-600 hover:text-indigo-800 text-xs underline ml-1 font-normal"
+                          title="Reschedule Jadwal"
+                        >
+                          Ubah
+                        </button>
                         {detail.is_rescheduled && (
                           <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
