@@ -11,13 +11,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Token akses Google tidak ditemukan. Silakan login ulang." }, { status: 401 });
     }
 
-    // Pastikan GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET terpasang di .env.local
-    const auth = new google.auth.OAuth2(
+    // Inisialisasi OAuth2 Client dengan benar
+    const oAuth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET
     );
-    auth.setCredentials({ access_token: accessToken });
-    const calendar = google.calendar({ version: 'v3', auth });
+    
+    oAuth2Client.setCredentials({ 
+      access_token: accessToken 
+    });
+
+    const calendar = google.calendar({ 
+      version: 'v3', 
+      auth: oAuth2Client 
+    });
 
     const targetBookingId = booking_id || item?.booking_id || detail?.id;
     const targetJadwalId = item?.id;
@@ -127,7 +134,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, eventId: finalEventId, durasi: durasiMenit });
 
   } catch (error: any) {
-    // Menampilkan pesan error asli dari Google API secara detail ke frontend
     const errorMsg = error.errors?.[0]?.message || error.message || "Terjadi kesalahan server";
     return NextResponse.json({ success: false, error: errorMsg, details: error.message }, { status: 500 });
   }
