@@ -37,22 +37,26 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
       const startDateTime = new Date(`${formData.tanggal_baru}T${formData.jam_baru}:00`);
       const endDateTime = new Date(startDateTime.getTime() + durasiMilidetik);
 
-      // 2. Update tabel Booking (sesuaikan nama kolom database jika perlu)
+      // Pastikan ID target aman (mendukung berbagai format struktur data props booking)
+      const targetBookingId = booking.id || booking.booking_id;
+      const targetJadwalBookingId = booking.booking_id || booking.id;
+
+      // 2. Update tabel Booking
       await supabase.from('Booking')
         .update({ 
           tanggal_foto: formData.tanggal_baru, 
           jam_foto: formData.jam_baru,
           is_rescheduled: true 
         })
-        .eq('id', booking.id);
+        .eq('id', targetBookingId);
 
-      // 3. Update tabel Jadwal
+      // 3. Update tabel Jadwal (menggunakan pencarian yang fleksibel)
       await supabase.from('jadwal')
         .update({ 
           tanggal: formData.tanggal_baru, 
           jam: formData.jam_baru 
         })
-        .eq('booking_id', booking.booking_id);
+        .or(`booking_id.eq.${targetJadwalBookingId},id.eq.${targetBookingId}`);
 
       // 4. Sinkronisasi ke Google Calendar
       const res = await fetch('/api/calendar/sync', {
@@ -60,26 +64,33 @@ export default function RescheduleModal({ booking, onClose, onSave }: any) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'reschedule',
-          booking_id: booking.booking_id,
+          booking_id: targetBookingId,
           new_start: startDateTime.toISOString(),
           new_end: endDateTime.toISOString(),
           accessToken: accessToken
         }),
       });
 
-      if (!res.ok) throw new Error("Gagal sync ke Google Calendar");
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Gagal sync ke Google Calendar");
+      }
 
-      // 5. Log aktivitas
-      await supabase.from('ActivityLog').insert({
-        booking_id: booking.id,
-        activity_type: 'Reschedule',
-        description: `Jadwal dipindah ke ${formData.tanggal_baru} ${formData.jam_baru}. Alasan: ${formData.alasan}`
-      });
+      // 5. Log aktivitas (opsional, pastikan tabel ActivityLog ada atau abaikan jika error)
+      try {
+        await supabase.from('ActivityLog').insert({
+          booking_id: targetBookingId,
+          activity_type: 'Reschedule',
+          description: `Jadwal dipindah ke ${formData.tanggal_baru} ${formData.jam_baru}. Alasan: ${formData.alasan || '-'}`
+        });
+      } catch (logErr) {
+        console.log("Log activity skipped", logErr);
+      }
 
       onSave();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Gagal melakukan update. Pastikan Anda sudah login.");
+      alert("Gagal melakukan update: " + (err.message || "Pastikan Anda sudah login."));
     } finally {
       setLoading(false);
     }
