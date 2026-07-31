@@ -8,9 +8,10 @@ export async function POST(req: NextRequest) {
     const { action, booking_id, new_start, new_end, item, detail, accessToken } = body;
 
     if (!accessToken) {
-      return NextResponse.json({ error: "Token tidak ditemukan" }, { status: 401 });
+      return NextResponse.json({ error: "Token akses Google tidak ditemukan. Silakan login ulang." }, { status: 401 });
     }
 
+    // Pastikan GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET terpasang di .env.local
     const auth = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     const targetBookingId = booking_id || item?.booking_id || detail?.id;
     const targetJadwalId = item?.id;
 
-    // Tentukan durasi berdasarkan paket (dicek dari detail maupun item untuk mencegah undefined)
+    // Tentukan durasi berdasarkan paket
     const teksPaket = `${detail?.paket || ""} ${item?.paket || ""}`;
     let durasiMenit = 60;
 
@@ -38,7 +39,6 @@ export async function POST(req: NextRequest) {
       durasiMenit = 90;
     }
 
-    // Helper untuk menghitung waktu selesai (end time) otomatis
     const startTimeStr = item?.startTime;
     let endTimeStr = item?.endTime;
     if (startTimeStr) {
@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Kalender berhasil diperbarui" });
     }
 
-    // 1. CARI APAKAH EVENT DENGAN NAMA & TANGGAL TERSEBUT SUDAH ADA DI GOOGLE CALENDAR
     const eventSummary = `Foto: ${item.nama_klien}`;
 
     const existingEventsRes = await calendar.events.list({
@@ -88,7 +87,6 @@ export async function POST(req: NextRequest) {
     let finalEventId = matchedEvent?.id || item?.google_event_id || item?.calendar_event_id;
 
     if (matchedEvent && matchedEvent.id) {
-      // Jika sudah ada di Google Calendar, gunakan patch dan update waktunya sesuai durasi baru
       await calendar.events.patch({
         calendarId: 'primary',
         eventId: matchedEvent.id,
@@ -101,7 +99,6 @@ export async function POST(req: NextRequest) {
       } as any);
       finalEventId = matchedEvent.id;
     } else {
-      // Jika belum ada, buat baru via insert dengan durasi yang sudah disesuaikan
       const res = await calendar.events.insert({
         calendarId: 'primary',
         requestBody: {
@@ -114,7 +111,6 @@ export async function POST(req: NextRequest) {
       finalEventId = res.data.id;
     }
 
-    // Simpan status dan event ID otomatis ke database Supabase
     const updatePromises = [];
     if (targetBookingId) {
       updatePromises.push(
@@ -131,6 +127,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, eventId: finalEventId, durasi: durasiMenit });
 
   } catch (error: any) {
-    return NextResponse.json({ error: "Gagal memproses kalender", details: error.message }, { status: 500 });
+    // Menampilkan pesan error asli dari Google API secara detail ke frontend
+    const errorMsg = error.errors?.[0]?.message || error.message || "Terjadi kesalahan server";
+    return NextResponse.json({ success: false, error: errorMsg, details: error.message }, { status: 500 });
   }
 }
